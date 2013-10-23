@@ -1,0 +1,79 @@
+<?php
+
+/**
+ * This migrates data from files in the filesystem
+ */
+
+/**
+ * Implements hook_migrate_api().
+ */
+function migrate_hrweb_migrate_api() {
+  $api = array(
+    'api' => 2,
+  );
+  return $api;
+}
+
+/**
+ * Implements hook_flush_caches().
+ */
+function migrate_uhs_policy_flush_caches() {
+  drupal_set_message("Directory for source files is currently: " . variable_get('uhs_migration_source', '/tmp'));
+  drupal_set_message("To change this use 'drush vset uhs_migration_source /path/to/my/files'");
+
+  drupal_set_message("If the CSV source data was created on MacOS or Linux line ending auto-detection should be 'yes'.  Current state: " . variable_get('uhs_source_data_macos', "yes"));
+  drupal_set_message("To change this use 'drush vset uhs_source_data_macos [no/yes]'");
+
+  migrate_uhs_policy_register_migrations();
+}
+
+
+
+
+/**
+ * Register all D6->D7 migrations.
+ */
+function migrate_uhs_policy_register_migrations() {
+  /**
+   * Each migration being registered takes an array of arguments, some required
+   * and some optional. Start with the common arguments required by all - the
+   * source_connection (connection key, set up in settings.php, pointing to
+   * the Drupal 6 database), source_version (major version of Drupal), and
+   * group_name (a.k.a. import job).
+   */
+  $common_arguments = array(
+//    'source_connection' => 'legacy',
+//    'source_version' => 6,
+    'group_name' => 'Manuals',
+  );
+
+  // The description and the migration machine name are also required arguments,
+  // which will be unique for each migration you register.
+
+  /*** Manuals ***/
+  $manuals_arguments = $common_arguments + array(
+      'machine_name' => 'Allergy',
+      'description' => t('Import Allergy manual'),
+      'path' => variable_get('uhs_migration_source', '/tmp'),
+      //csvcolumns is optional. can be determined from the header row.
+      'csvcolumns' => array(
+        array('source_id' => 'The ID of the source document.'),
+        array('title' => 'The title of the source document.'),
+        array('filename' => 'The filename of the source document. (Path excluded. Just file name.)'),
+        array('parent_id' => "The ID of the document's immediate parent. NULL values indicate top-level items. Mimicks Drupal book structure." ),
+      ),
+      'options' => array(
+        'header_rows' => 1,
+        'embedded_newlines' => TRUE,
+      ),
+    );
+  /*
+  while (list($k, $v) = each($manuals_arguments['csvcolumns'])) {
+    $manuals_arguments['fields'][$k] = $v;
+  }
+  */
+  Migration::registerMigration('UhsMigration',
+    $manuals_arguments['machine_name'], $manuals_arguments);
+
+}
+

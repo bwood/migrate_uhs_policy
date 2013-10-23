@@ -1,0 +1,17 @@
+name = "Migrate UHS policy manuals"
+description = "Migrate content from filesystem"
+package = "Migration"
+core = 7.x
+;hidden = TRUE
+version = "7.x-0.1"
+
+dependencies[] = migrate
+; migrate_extras, though deprecated, is needed. see comments in node.inc
+;dependencies[] = migrate_extras
+dependencies[] = book
+
+files[] = book_files.inc
+files[] = uhs_csv.inc
+
+
+
