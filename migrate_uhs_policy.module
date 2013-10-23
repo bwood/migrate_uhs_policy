@@ -42,9 +42,18 @@ function migrate_uhs_policy_register_migrations() {
    * group_name (a.k.a. import job).
    */
   $common_arguments = array(
-//    'source_connection' => 'legacy',
-//    'source_version' => 6,
     'group_name' => 'Manuals',
+    //csvcolumns is optional. can be determined from the header row.
+    'csvcolumns' => array(
+      array('source_id','The ID of the source document.'),
+      array('title','The title of the source document.'),
+      array('filename','The filename of the source document. (Path excluded. Just file name.)'),
+      array('parent_id',"The ID of the document's immediate parent. NULL values indicate top-level items. Mimicks Drupal book structure." ),
+    ),
+    'options' => array(
+      'header_rows' => 1,
+      'embedded_newlines' => TRUE,
+    ),
   );
 
   // The description and the migration machine name are also required arguments,
@@ -54,26 +63,17 @@ function migrate_uhs_policy_register_migrations() {
   $manuals_arguments = $common_arguments + array(
       'machine_name' => 'Allergy',
       'description' => t('Import Allergy manual'),
-      'path' => variable_get('uhs_migration_source', '/tmp'),
-      //csvcolumns is optional. can be determined from the header row.
-      'csvcolumns' => array(
-        array('source_id','The ID of the source document.'),
-        array('title','The title of the source document.'),
-        array('filename','The filename of the source document. (Path excluded. Just file name.)'),
-        array('parent_id',"The ID of the document's immediate parent. NULL values indicate top-level items. Mimicks Drupal book structure." ),
-      ),
-      'options' => array(
-        'header_rows' => 1,
-        'embedded_newlines' => TRUE,
-      ),
+      'path' => variable_get('uhs_migration_source', '/tmp') . 'Allergy.csv',
     );
-  /*
-  while (list($k, $v) = each($manuals_arguments['csvcolumns'])) {
-    $manuals_arguments['fields'][$k] = $v;
-  }
-  */
   Migration::registerMigration('UhsMigration',
     $manuals_arguments['machine_name'], $manuals_arguments);
 
+  $manuals_arguments = $common_arguments + array(
+      'machine_name' => 'OtherTest',
+      'description' => t('Import Other Test manual'),
+      'path' => variable_get('uhs_migration_source', '/tmp') . 'Other Test.csv',
+    );
+  Migration::registerMigration('UhsMigration',
+    $manuals_arguments['machine_name'], $manuals_arguments);
 }
 
