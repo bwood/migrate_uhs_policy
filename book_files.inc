@@ -65,21 +65,22 @@ class UhsMigration extends Migration {
     // The destination content type.
     $this->destination = new MigrateDestinationNode('book');
 
-    // Map the fields
-    //$this->addUnmigratedSources(array('source_id', 'filename'));
-    /*
-    $this->addFieldMapping(NULL, 'source_id')
-      ->description(t('This info will not be maintained in Drupal'))
-      ->issueGroup(t('DNM'));
-*/
+    /*** Map the fields ***/
+
+    // source_id don't need to map. Handeled by MigrateSQLMap above
+
+    // Not mapped to destination fields. (Will still be avialable in $row.)
+    $this->addUnmigratedSources(array('filename', 'parent_id'));
+
     //uid not in source data
     $this->addFieldMapping('uid', NULL)
       ->defaultValue(1);
     // body not in source data
     $this->addFieldMapping('body', NULL)
-      ->arguments(array('format' => 'full_html'))
+      ->arguments(array('format' => 'panopoly_html_text'))
       ->defaultValue("This is test content...");
 
+    // Title is the only field actually mapped from the CSV.
     $this->addFieldMapping('title', 'title');
   }
 
@@ -87,14 +88,17 @@ class UhsMigration extends Migration {
    * Prepare a row.
    */
   public function prepareRow($row) {
-    /*
-    if (empty($row->title)) {
+    if ((empty($row->title)) || (empty($row->filename)))  {
       return FALSE;
     }
-    */
 
+    //if (($row->filename) == 'BOOK') {
+      //$row->book_id = $row->source_id;
+    //}
+    $row->book_id = 1;
     // Set to admin for now.
-    $row->uid = 1;
+    //$row->uid = 1;
+    // done with default value
 
     /*
     // Create a new SourceParser to handle HTML content.
@@ -105,5 +109,48 @@ class UhsMigration extends Migration {
     $row->title = $row->sourceid;
     */
   }
+
+
+  /**
+   * Acts right after a book node has been saved. Map the book hierarchy.
+   *
+   * @param object $node
+   *   A node object for the newly migrated book.
+   * @param stdClass $row
+   *   An object representing data from the source row.
+   */
+  public function complete($node, stdClass $row) {
+    // If this is a top-level book, don't set a parent.
+    $book_id = ($row->source_id == $row->book_id) ? $node->nid : parent::handleSourceMigration($this->machineName, $row->book_id);
+
+    $node->book['bid'] = $book_id;
+    $node->book['nid'] = $node->nid;
+
+    // The CSV will list the pages in the order they should appear, so source_id = weight
+    //$node->book['weight'] = $row->book_weight;
+    $node->book['weight'] = $row->source_id;
+
+    $parent_id = $row->parent_id;
+
+    // If there is a parent we lookup the migrated node
+    if ((isset($parent_id)) && ($parent_id > 0)) {
+      $parent_node = parent::handleSourceMigration($this->machineName, $parent_id);
+      // We get the mlid of the migrated parent
+      $query = db_select("menu_links", "ml")
+        ->fields("ml")
+        ->condition("ml.link_path", "node/" . $parent_node, "=")
+        ->execute()
+        ->fetchAssoc();
+      $plid = $query['mlid'];
+
+      // We add the parent mlid (plid)
+      $node->book['plid'] = $plid;
+    }
+
+    _book_update_outline($node);
+    node_save($node);
+
+  }
+
 
 }
