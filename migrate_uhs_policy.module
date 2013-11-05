@@ -63,11 +63,11 @@ function migrate_uhs_policy_register_migrations() {
   $manuals_arguments = $common_arguments + array(
       'machine_name' => 'Allergy',
       'description' => t('Import Allergy manual'),
-      'path' => variable_get('uhs_migration_source', '/tmp') . 'Allergy.csv',
+      'path' => variable_get('uhs_migration_source', '/tmp') . '/Allergy.csv',
     );
   Migration::registerMigration('UhsMigration',
     $manuals_arguments['machine_name'], $manuals_arguments);
-
+/*
   $manuals_arguments = $common_arguments + array(
       'machine_name' => 'OtherTest',
       'description' => t('Import Other Test manual'),
@@ -75,5 +75,6 @@ function migrate_uhs_policy_register_migrations() {
     );
   Migration::registerMigration('UhsMigration',
     $manuals_arguments['machine_name'], $manuals_arguments);
+*/
 }
 

@@ -56,6 +56,7 @@ class UhsMigration extends Migration {
       ini_set("auto_detect_line_endings", "1");
     }
     $path = $arguments['path']; //vget should always give a default value
+
     (array_key_exists('csvcolumns', $arguments)) ? $csvcolumns = $arguments['csvcolumns'] : $csvcolumns = array();
     (array_key_exists('options', $arguments)) ? $options = $arguments['options'] : $options = array();
     (array_key_exists('fields', $arguments)) ? $fields = $arguments['fields'] : $fields = array();
@@ -76,9 +77,9 @@ class UhsMigration extends Migration {
     $this->addFieldMapping('uid', NULL)
       ->defaultValue(1);
     // body not in source data
-    $this->addFieldMapping('body', NULL)
+    $this->addFieldMapping('body', 'body')
       ->arguments(array('format' => 'panopoly_html_text'))
-      ->defaultValue("This is test content...");
+      ->defaultValue(NULL);
 
     // Title is the only field actually mapped from the CSV.
     $this->addFieldMapping('title', 'title');
@@ -92,13 +93,12 @@ class UhsMigration extends Migration {
       return FALSE;
     }
 
-    //if (($row->filename) == 'BOOK') {
-      //$row->book_id = $row->source_id;
-    //}
+    /**
+     * Since each migration processes one CSV file which represents one book,
+     * book_id can always be 1.
+    */
     $row->book_id = 1;
-    // Set to admin for now.
-    //$row->uid = 1;
-    // done with default value
+
 
     /*
     // Create a new SourceParser to handle HTML content.
@@ -108,6 +108,65 @@ class UhsMigration extends Migration {
     // The title is the filename.
     $row->title = $row->sourceid;
     */
+
+    if ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
+      $row->body = $this->getBody($row);
+    }
+    return TRUE;
+  }
+
+  protected function getBody($row) {
+    //TODO: move to .module
+    //need to cd to avoid "No Info.plist file in application bundle"
+    $path_soffice = 'cd /Applications/LibreOffice.app/Contents/program;'; //vset
+    $cmd_soffice = './soffice --headless --convert-to html:HTML';
+    $cd_back = '; cd -';
+
+    // Compute base path
+    // filename of the csv file == name of its directory
+    $parts = explode('/', $this->source->file);
+    $dir = str_replace('.csv', '', array_pop($parts));
+    $base_path = variable_get('uhs_migration_source', '/tmp') . '/' . $dir;
+    $filename = array_shift(explode('.', $row->filename));
+
+    //$rd_iterator = new RecursiveDirectoryIterator($base_path); /Users/bwood/nobackup/one/
+    //$rd_iterator = new RecursiveDirectoryIterator('/Users/bwood/nobackup/one');
+    $rd_iterator = new RecursiveDirectoryIterator($base_path);
+    $ritit = new RecursiveIteratorIterator($rd_iterator);
+    $source_files = array('html' => array(), 'doc' => array());
+    foreach($ritit as $object_name => $file) {
+      //if ($file->isDir()) continue;
+      $fn = $file->getFilename();
+      if ($file->getFilename() == $filename . '.html') {
+        $source_files['html'][] = $file->getPathName();
+      }
+      if ($file->getFilename() == $filename . '.doc') {
+        $source_files['doc'][] = $file->getPathName();
+      }
+    }
+
+    //is there an HTML version? If no, convert
+    if (count($source_files['doc']) > 1) {
+      //TODO: write to log?
+      drupal_set_message($filename . ".doc found " . count($source_files['doc']) . "times.", 'error');
+      return NULL;
+    }
+
+    if ((count($source_files['doc']) == 1) && (count($source_files['html']) == 0)) {
+      drupal_set_message("Converting " . $filename . ".doc");
+      $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . $base_path . '/' . escapeshellarg($filename) . ".doc --outdir " . $base_path;
+      $out = exec($cmd, $output, $return_status);
+      if (file_exists($base_path . '/' . $filename . ".html")) {
+        return file_get_contents($base_path . '/' . $filename . ".html");
+      }
+      return NULL;
+    }
+
+    if (count($source_files['html']) == 1) {
+      return file_get_contents($base_path . '/' . $filename . ".html");
+    }
+
+
   }
 
 
