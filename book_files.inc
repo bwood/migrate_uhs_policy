@@ -112,6 +112,9 @@ class UhsMigration extends Migration {
     if ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
       $row->body = $this->getBody($row);
     }
+    elseif (strtoupper($row->filename) !== 'BOOK') {
+      $row->body = "The content for this page is '" . $row->filename . "'.  This type of content will be migrated in a future phase of the project.";
+    }
     return TRUE;
   }
 
