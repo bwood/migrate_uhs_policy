@@ -78,7 +78,7 @@ class UhsMigration extends Migration {
       ->defaultValue(1);
     // body not in source data
     $this->addFieldMapping('body', 'body')
-      ->arguments(array('format' => 'panopoly_html_text'))
+      ->arguments(array('format' => 'uhs_full_html'))
       ->defaultValue(NULL);
 
     // Title is the only field actually mapped from the CSV.
@@ -109,7 +109,11 @@ class UhsMigration extends Migration {
     $row->title = $row->sourceid;
     */
 
-    if ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
+    if (strpos(strtoupper($row->filename), 'INDEX') !== FALSE) {
+      //Index pages for Allergy manual shouldn't have content
+      $row->body = NULL;
+    }
+    elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
       $row->body = $this->getBody($row);
     }
     elseif (strtoupper($row->filename) !== 'BOOK') {
@@ -118,6 +122,10 @@ class UhsMigration extends Migration {
     return TRUE;
   }
 
+  protected function cleanupBody($body) {
+
+    return $body;
+  }
   protected function getBody($row) {
     //TODO: move to .module
     //need to cd to avoid "No Info.plist file in application bundle"
