@@ -1,11 +1,12 @@
 <?php
 
 // Include QueryPath.
-require_once drupal_get_path('module', 'my_migration') . '/libraries/QueryPath-2.1.2-minimal/QueryPath.php';
-require_once drupal_get_path('module', 'my_migration') . '/libraries/QueryPath-2.1.2-minimal/Extension/QPXML.php';
+$path = drupal_get_path('library', 'querypath'); //requires hook_libraries_info?
+require_once 'sites/all/libraries/querypath/src/qp.php';
+//require_once drupal_get_path('module', 'my_migration') . '/libraries/QueryPath-2.1.2-minimal/Extension/QPXML.php';
 
 class SourceParser {
-  protected $id;
+  //protected $id;
   protected $html;
   protected $qp;
 
@@ -13,19 +14,35 @@ class SourceParser {
    * Constructor.
    *
    * @param $id
-   *  The filename, e.g. pm7205.html
+   *  The id from the csv index data
    * @param $html
    *  The full HTML data as loaded from the file.
    */
-  public function __construct($id, $html) {
+  //public function __construct($id, $html) {
+  public function __construct($html) {
     $this->id = $id;
     $this->html = $html;
-
+/*
+    $this->html = <<<EOT
+<P CLASS="western" STYLE="margin-bottom: 0in"><BR>
+Stuff
+</P>
+<DIV TYPE=FOOTER>
+	<P STYLE="margin-bottom: 0in; widows: 0; orphans: 0"><SDFIELD TYPE=FILENAME FORMAT=PATHNAME>/Users/bwood/Work/drupal/Site-backups/UHS/UHS_Manuals/Allergy/Organization.doc</SDFIELD></P>
+</DIV>
+EOT;
+;
+*/
+/*
     $this->charTransform();
     $this->fixEncoding();
     $this->wrapHTML();
     $this->initQP();
     $this->stripComments();
+*/
+    $this->initQP();
+    $this->removeFooter();
+    $this->removeTitles();
   }
 
   /**
@@ -86,11 +103,23 @@ class SourceParser {
     }
   }
 
+  public function removeFooter() {
+    // remove <DIV TYPE=FOOTER>
+    $this->qp->remove('div[type=FOOTER]'); //attribute value is case sensitive
+  }
+
+  public function removeTitles() {
+    /* remove
+    <P CLASS="western" STYLE="margin-bottom: 0in; border-top: none; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding-top: 0in; padding-bottom: 0.01in; padding-left: 0in; padding-right: 0in">
+    */
+    $this->qp->remove('p[style~=border-bottom]');
+  }
+
   /**
    * Return the HTML.
    */
   public function getBody() {
-    $body = $this->qp->top('body')->innerHTML();
+    $body = $this->qp->top('html')->innerHTML();
     $body = trim($body);
     return $body;
   }

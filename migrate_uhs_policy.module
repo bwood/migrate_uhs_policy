@@ -63,7 +63,7 @@ function migrate_uhs_policy_register_migrations() {
   $manuals_arguments = $common_arguments + array(
       'machine_name' => 'Allergy',
       'description' => t('Import Allergy manual'),
-      'path' => variable_get('uhs_migration_source', '/tmp') . '/Allergy.csv',
+      'path' => variable_get('uhs_migration_source', '/tmp') . '/Allergy & Travel.csv',
     );
   Migration::registerMigration('UhsMigration',
     $manuals_arguments['machine_name'], $manuals_arguments);
@@ -78,3 +78,24 @@ function migrate_uhs_policy_register_migrations() {
 */
 }
 
+/*
+function migrate_uhs_policy_libraries_info() {
+$libraries['querypath'] = array(
+  'name' => 'QueryPath, a PHP library for working with XML and HTML',
+  'vendor url' => 'https://github.com/technosophos/querypath',
+  'download url' => 'https://github.com/technosophos/querypath/archive/master.zip',
+
+  'version arguments' => array(
+    'file' => 'QueryPath.php',
+    'pattern' => '@version\s+([0-9a-zA-Z\.-]+)@',
+    'lines' => 4,
+  ),
+
+  'path' => 'src',
+  'files' => array(
+    'php' => array('QueryPath.php'),
+  ),
+);
+  return $libraries;
+}
+*/
