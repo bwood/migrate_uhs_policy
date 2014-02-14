@@ -99,22 +99,13 @@ class UhsMigration extends Migration {
     */
     $row->book_id = 1;
 
-
-    /*
-    // Create a new SourceParser to handle HTML content.
-    $source_parser = new SourceParser(substr($row->sourceid, 1), $row->filedata);
-    $row->body = $source_parser->getBody();
-
-    // The title is the filename.
-    $row->title = $row->sourceid;
-    */
-
     if (strpos(strtoupper($row->filename), 'INDEX') !== FALSE) {
       //Index pages for Allergy manual shouldn't have content
       $row->body = NULL;
     }
     elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
-      $row->body = $this->getBody($row);
+      $sp = new SourceParser($this->getHtml($row));
+      $row->body = $sp->getBody();
     }
     elseif (strtoupper($row->filename) !== 'BOOK') {
       $row->body = "The content for this page is '" . $row->filename . "'.  This type of content will be migrated in a future phase of the project.";
@@ -122,11 +113,8 @@ class UhsMigration extends Migration {
     return TRUE;
   }
 
-  protected function cleanupBody($body) {
 
-    return $body;
-  }
-  protected function getBody($row) {
+  protected function getHtml($row) {
     //TODO: move to .module
     //need to cd to avoid "No Info.plist file in application bundle"
     $path_soffice = 'cd /Applications/LibreOffice.app/Contents/program;'; //vset
@@ -164,8 +152,10 @@ class UhsMigration extends Migration {
     }
 
     if ((count($source_files['doc']) == 1) && (count($source_files['html']) == 0)) {
-      drupal_set_message("Converting " . $filename . ".doc");
-      $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . $base_path . '/' . escapeshellarg($filename) . ".doc --outdir " . $base_path;
+
+      //exec(): support filenames and paths containing [space], ', &
+      drupal_set_message("Converting " . str_replace(' ', '\ ', escapeshellcmd($filename)) . ".doc");
+      $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . str_replace(' ', '\ ', escapeshellcmd($base_path)) . '/' . str_replace(' ', '\ ', escapeshellcmd($filename)) . ".doc --outdir " . str_replace(' ', '\ ', escapeshellcmd($base_path));
       $out = exec($cmd, $output, $return_status);
       if (file_exists($base_path . '/' . $filename . ".html")) {
         return file_get_contents($base_path . '/' . $filename . ".html");
