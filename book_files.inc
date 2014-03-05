@@ -2,23 +2,25 @@
 
 class UhsMigration extends Migration {
   public $base_dir;
+  protected $logfile = '';
 
   /**
    * Constructor.
    */
   public function __construct(array $arguments) {
     parent::__construct($arguments);
+    // logfile
 
     // A map of source CSV source_id -> destination node id.
     $this->map = new MigrateSQLMap($this->machineName,
-        array(
-          'source_id' => array(
-            'type' => 'int',
-            'not null' => TRUE,
-            'description' => 'Document ID.'
-          )
-        ),
-        MigrateDestinationNode::getKeySchema()
+      array(
+        'source_id' => array(
+          'type' => 'int',
+          'not null' => TRUE,
+          'description' => 'Document ID.'
+        )
+      ),
+      MigrateDestinationNode::getKeySchema()
     );
 
     // The source fields.
@@ -27,15 +29,16 @@ class UhsMigration extends Migration {
       'title' => t('Title'),
       'filename' => t('Filename of the document.'),
       'parent_id' => t('Parent ID of the document.'),
+      'source_manual' => t('Name of the external manual that contains this document.'),
     );
 
 
     /***
-    // The source of the migration is HTML files from the old site.
-    $list_files = new MigrateListFiles(array($this->base_dir), $this->base_dir, $regex);
-    $item_file = new MigrateItemFile($this->base_dir);
-    $this->source = new MigrateSourceList($list_files, $item_file, $fields);
-    ***/
+     * // The source of the migration is HTML files from the old site.
+     * $list_files = new MigrateListFiles(array($this->base_dir), $this->base_dir, $regex);
+     * $item_file = new MigrateItemFile($this->base_dir);
+     * $this->source = new MigrateSourceList($list_files, $item_file, $fields);
+     ***/
 
     /**
      * Simple initialization.
@@ -66,17 +69,37 @@ class UhsMigration extends Migration {
     // The destination content type.
     $this->destination = new MigrateDestinationNode('book');
 
+    //Keep track of machine_name to filename translations for all migrations
+    $this->translations = $arguments[translations];
+
     /*** Map the fields ***/
 
     // source_id don't need to map. Handeled by MigrateSQLMap above
 
     // Not mapped to destination fields. (Will still be avialable in $row.)
-    $this->addUnmigratedSources(array('filename', 'parent_id'));
+    $this->addUnmigratedSources(array('filename', 'parent_id', 'source_manual'));
+
+    // Destinations that that don't map to sources
+    // $this->addUnmigratedDestinations(array('field_shared_page'));
 
     //uid not in source data
     $this->addFieldMapping('uid', NULL)
       ->defaultValue(1);
+
+    /*
+     * shared_page is created in prepareRow()
+     */
+    $this->addFieldMapping('field_shared_page', 'shared_page')
+      /*
+       * this will "lazily" create terms as we encounter them
+       * i.e. if you input foo and foo isn't in the vocab, it will create the
+       * term/tid and populate this termref field with the tid (the value
+       * of the term itself lives in the vocab table.
+       */
+      ->arguments(array('create_term' => TRUE));
+
     // body not in source data
+    //FIXME: body, null?
     $this->addFieldMapping('body', 'body')
       ->arguments(array('format' => 'uhs_full_html'))
       ->defaultValue(NULL);
@@ -89,14 +112,14 @@ class UhsMigration extends Migration {
    * Prepare a row.
    */
   public function prepareRow($row) {
-    if ((empty($row->title)) || (empty($row->filename)))  {
+    if ((empty($row->title)) || (empty($row->filename))) {
       return FALSE;
     }
 
     /**
      * Since each migration processes one CSV file which represents one book,
      * book_id can always be 1.
-    */
+     */
     $row->book_id = 1;
 
     if (strpos(strtoupper($row->filename), 'INDEX') !== FALSE) {
@@ -108,13 +131,28 @@ class UhsMigration extends Migration {
       $row->body = $sp->getBody();
     }
     elseif (strtoupper($row->filename) !== 'BOOK') {
+      // in this case filename indicates that the row is some type of non-importable content.
       $row->body = "The content for this page is '" . $row->filename . "'.  This type of content will be migrated in a future phase of the project.";
     }
+
+    if (!empty($row->source_manual)) {
+      $source_info = explode(':', $row->source_manual);
+      $source_machine_name = $this->translations[$source_info[0]];
+      $source_page_nid = parent::handleSourceMigration($source_machine_name, $source_info[1]);
+      /*
+       * shared_page doesn't exist in the source.
+       */
+      $row->shared_page = $source_page_nid;
+    }
+
     return TRUE;
   }
 
+  public function prepare($node, stdClass $row) {
+ $x =1;
+  }
 
-  protected function getHtml($row) {
+ protected function getHtml($row) {
     //TODO: move to .module
     //need to cd to avoid "No Info.plist file in application bundle"
     $path_soffice = 'cd /Applications/LibreOffice.app/Contents/program;'; //vset
@@ -128,12 +166,11 @@ class UhsMigration extends Migration {
     $base_path = variable_get('uhs_migration_source', '/tmp') . '/' . $dir;
     $filename = array_shift(explode('.', $row->filename));
 
-    //$rd_iterator = new RecursiveDirectoryIterator($base_path); /Users/bwood/nobackup/one/
-    //$rd_iterator = new RecursiveDirectoryIterator('/Users/bwood/nobackup/one');
+    // Look for the file in child directories
     $rd_iterator = new RecursiveDirectoryIterator($base_path);
     $ritit = new RecursiveIteratorIterator($rd_iterator);
     $source_files = array('html' => array(), 'doc' => array());
-    foreach($ritit as $object_name => $file) {
+    foreach ($ritit as $object_name => $file) {
       //if ($file->isDir()) continue;
       $fn = $file->getFilename();
       if ($file->getFilename() == $filename . '.html') {
@@ -163,6 +200,7 @@ class UhsMigration extends Migration {
       return NULL;
     }
 
+    // if the .html verison exists, re-import it
     if (count($source_files['html']) == 1) {
       return file_get_contents($base_path . '/' . $filename . ".html");
     }
@@ -192,7 +230,7 @@ class UhsMigration extends Migration {
 
     $parent_id = $row->parent_id;
 
-    // If there is a parent we lookup the migrated node
+    // If there is a parent we lookup the√ migrated node
     if ((isset($parent_id)) && ($parent_id > 0)) {
       $parent_node = parent::handleSourceMigration($this->machineName, $parent_id);
       // We get the mlid of the migrated parent
@@ -212,5 +250,20 @@ class UhsMigration extends Migration {
 
   }
 
+  protected function createStub($migration, array $source_id) {
+    $node = new stdClass();
+    $node->title = t('Stub for @id', array('@id' => $source_id[0]));
+    $node->body[LANGUAGE_NONE][0] = t('Stub body');
+    $node->type = $this->destination->getBundle();
+    $node->uid = 1;
+    $node->status = 0;
+    node_save($node);
+    if (isset($node->nid)) {
+      return array($node->nid);
+    }
+    else {
+      return FALSE;
+    }
+  }
 
 }

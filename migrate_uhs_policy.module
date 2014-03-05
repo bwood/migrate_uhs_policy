@@ -28,8 +28,6 @@ function migrate_uhs_policy_flush_caches() {
 }
 
 
-
-
 /**
  * Register all D6->D7 migrations.
  */
@@ -45,10 +43,11 @@ function migrate_uhs_policy_register_migrations() {
     'group_name' => 'Manuals',
     //csvcolumns is optional. can be determined from the header row.
     'csvcolumns' => array(
-      array('source_id','The ID of the source document.'),
-      array('title','The title of the source document.'),
-      array('filename','The filename of the source document. (Path excluded. Just file name.)'),
-      array('parent_id',"The ID of the document's immediate parent. NULL values indicate top-level items. Mimicks Drupal book structure." ),
+      array('source_id', 'The ID of the source document.'),
+      array('title', 'The title of the source document.'),
+      array('filename', 'The filename of the source document. (Path excluded. Just file name.)'),
+      array('parent_id', "The ID of the document's immediate parent. NULL values indicate top-level items. Mimicks Drupal book structure."),
+      array('source_manual', "For pages that share content, this field indicates the source of the content."),
     ),
     'options' => array(
       'header_rows' => 1,
@@ -60,23 +59,38 @@ function migrate_uhs_policy_register_migrations() {
   // which will be unique for each migration you register.
 
   /*** Manuals ***/
-  $manuals_arguments = $common_arguments + array(
-      'machine_name' => 'Allergy',
+  $common_arguments['group_name'] = "Manuals";
+  $common_arguments['translations'] = array(
+    'Primary & Urgent Care' => 'Primary_and_Urgent_Care',
+  );
+  $manuals_arguments = array(
+    array(
+      'machine_name' => 'Allergy_and_Travel',
+      'class_name' => 'UhsMigration',
       'description' => t('Import Allergy manual'),
       'path' => variable_get('uhs_migration_source', '/tmp') . '/Allergy & Travel.csv',
-    );
-  Migration::registerMigration('UhsMigration',
-    $manuals_arguments['machine_name'], $manuals_arguments);
-/*
-  $manuals_arguments = $common_arguments + array(
-      'machine_name' => 'OtherTest',
-      'description' => t('Import Other Test manual'),
-      'path' => variable_get('uhs_migration_source', '/tmp') . 'Other Test.csv',
-    );
-  Migration::registerMigration('UhsMigration',
-    $manuals_arguments['machine_name'], $manuals_arguments);
-*/
+    ),
+    array(
+      'machine_name' => 'Urgent_Care_RN_Standing_Orders',
+      'class_name' => 'UhsMigration',
+      'description' => t('Import Urgent Care RN Standing Orders'),
+      'path' => variable_get('uhs_migration_source', '/tmp') . '/Urgent Care RN Standing Orders.csv',
+    ),
+    array(
+      'machine_name' => 'Primary_and_Urgent_Care',
+      'class_name' => 'UhsMigration',
+      'description' => t('Import Primary & Urgent Care'),
+      'path' => variable_get('uhs_migration_source', '/tmp') . '/Primary & Urgent Care.csv',
+    ),
+  );
+
+  foreach ($manuals_arguments as $arguments) {
+    $arguments = array_merge_recursive($arguments, $common_arguments);
+    Migration::registerMigration($arguments['class_name'], $arguments['machine_name'],
+      $arguments);
+  }
 }
+
 
 /*
 function migrate_uhs_policy_libraries_info() {
