@@ -12,6 +12,7 @@ dependencies[] = book
 
 files[] = book_files.inc
 files[] = uhs_csv.inc
+files[] = source_parser.inc
 
 
 
