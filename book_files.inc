@@ -148,10 +148,6 @@ class UhsMigration extends Migration {
     return TRUE;
   }
 
-  public function prepare($node, stdClass $row) {
- $x =1;
-  }
-
  protected function getHtml($row) {
     //TODO: move to .module
     //need to cd to avoid "No Info.plist file in application bundle"
@@ -183,26 +179,26 @@ class UhsMigration extends Migration {
 
     //is there an HTML version? If no, convert
     if (count($source_files['doc']) > 1) {
-      //TODO: write to log?
       drupal_set_message($filename . ".doc found " . count($source_files['doc']) . "times.", 'error');
       return NULL;
     }
 
     if ((count($source_files['doc']) == 1) && (count($source_files['html']) == 0)) {
-
       //exec(): support filenames and paths containing [space], ', &
-      drupal_set_message("Converting " . str_replace(' ', '\ ', escapeshellcmd($filename)) . ".doc");
-      $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . str_replace(' ', '\ ', escapeshellcmd($base_path)) . '/' . str_replace(' ', '\ ', escapeshellcmd($filename)) . ".doc --outdir " . str_replace(' ', '\ ', escapeshellcmd($base_path));
+      $doc_file = str_replace(' ', '\ ', escapeshellcmd(preg_replace('/.doc?/i', '', $source_files['doc'][0])));
+      drupal_set_message("Converting " . str_replace(' ', '\ ', escapeshellcmd($doc_file)) . ".doc");
+      $filename_escaped = str_replace(' ', '\ ', escapeshellcmd($filename));
+      $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . $doc_file . ".doc --outdir " . str_replace($filename_escaped, '', $doc_file);
       $out = exec($cmd, $output, $return_status);
-      if (file_exists($base_path . '/' . $filename . ".html")) {
-        return file_get_contents($base_path . '/' . $filename . ".html");
+      if (file_exists($base_path . '/' . $doc_file . ".html")) {
+        return file_get_contents($base_path . '/' . $doc_file . ".html");
       }
       return NULL;
     }
 
     // if the .html verison exists, re-import it
     if (count($source_files['html']) == 1) {
-      return file_get_contents($base_path . '/' . $filename . ".html");
+      return file_get_contents($source_files['html'][0]);
     }
 
 
