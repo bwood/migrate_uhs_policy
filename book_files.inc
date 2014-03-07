@@ -33,13 +33,6 @@ class UhsMigration extends Migration {
     );
 
 
-    /***
-     * // The source of the migration is HTML files from the old site.
-     * $list_files = new MigrateListFiles(array($this->base_dir), $this->base_dir, $regex);
-     * $item_file = new MigrateItemFile($this->base_dir);
-     * $this->source = new MigrateSourceList($list_files, $item_file, $fields);
-     ***/
-
     /**
      * Simple initialization.
      *
@@ -58,6 +51,8 @@ class UhsMigration extends Migration {
     if (strtolower(variable_get('uhs_source_data_macos')) == "yes") {
       ini_set("auto_detect_line_endings", "1");
     }
+
+    $this->uhs_migration_source_dir = variable_get('uhs_migration_source', '/tmp');
     $path = $arguments['path']; //vget should always give a default value
 
     (array_key_exists('csvcolumns', $arguments)) ? $csvcolumns = $arguments['csvcolumns'] : $csvcolumns = array();
@@ -96,7 +91,8 @@ class UhsMigration extends Migration {
        * term/tid and populate this termref field with the tid (the value
        * of the term itself lives in the vocab table.
        */
-      ->arguments(array('create_term' => TRUE));
+      ->arguments(array('create_term' => TRUE))
+      ->defaultValue(NULL);
 
     // body not in source data
     //FIXME: body, null?
@@ -136,19 +132,44 @@ class UhsMigration extends Migration {
     }
 
     if (!empty($row->source_manual)) {
-      $source_info = explode(':', $row->source_manual);
-      $source_machine_name = $this->translations[$source_info[0]];
-      $source_page_nid = parent::handleSourceMigration($source_machine_name, $source_info[1]);
-      /*
-       * shared_page doesn't exist in the source.
-       */
-      $row->shared_page = $source_page_nid;
+      $source_machine_name = $this->translations[$row->source_manual];
+      $file_source_id = $this->getSharedFileSourceId($row);
+      // shared_page created here. doesn't come from csv file.
+      $row->shared_page = NULL;
+      if ($file_source_id !== FALSE) {
+        $source_page_nid = parent::handleSourceMigration($source_machine_name, $file_source_id);
+        $row->shared_page = $source_page_nid;
+      }
     }
-
     return TRUE;
   }
 
- protected function getHtml($row) {
+  protected function getSharedFileSourceId($row) {
+    if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
+      drupal_set_message(":" . $row->source_id . " references source_manual = " . $row->source_manual . "which could not be found.", "error");
+    }
+    $source_csv_file = file($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv");
+    $matches = array();
+    foreach ($source_csv_file as $line) {
+      $line = explode(',', $line);
+      if ($line[2] == $row->filename) {
+        $matches[$line[0]] = $line[2];
+      }
+    }
+    if (count($matches) == 0) {
+      drupal_set_message(":" . $row->source_id . " references source_manual = " . $row->source_manual . " and filename = " . $row->filename . ", but " . $row->source_manual . " does not contain that file.", "error");
+      }
+    elseif (count($matches) > 1) {
+      drupal_set_message(":" . $row->source_id . " references source_manual = " . $row->source_manual . " and filename = " . $row->filename . ", and " . $row->source_manual . " lists this file multiple times.", "warning");
+      }
+    elseif (count($matches) == 1) {
+      $keys = array_keys($matches);
+      return $keys[0];
+    }
+    return FALSE;
+  }
+
+  protected function getHtml($row) {
     //TODO: move to .module
     //need to cd to avoid "No Info.plist file in application bundle"
     $path_soffice = 'cd /Applications/LibreOffice.app/Contents/program;'; //vset
@@ -159,11 +180,10 @@ class UhsMigration extends Migration {
     // filename of the csv file == name of its directory
     $parts = explode('/', $this->source->file);
     $dir = str_replace('.csv', '', array_pop($parts));
-    $base_path = variable_get('uhs_migration_source', '/tmp') . '/' . $dir;
     $filename = array_shift(explode('.', $row->filename));
 
     // Look for the file in child directories
-    $rd_iterator = new RecursiveDirectoryIterator($base_path);
+    $rd_iterator = new RecursiveDirectoryIterator($this->uhs_migration_source_dir);
     $ritit = new RecursiveIteratorIterator($rd_iterator);
     $source_files = array('html' => array(), 'doc' => array());
     foreach ($ritit as $object_name => $file) {
@@ -190,8 +210,8 @@ class UhsMigration extends Migration {
       $filename_escaped = str_replace(' ', '\ ', escapeshellcmd($filename));
       $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . $doc_file . ".doc --outdir " . str_replace($filename_escaped, '', $doc_file);
       $out = exec($cmd, $output, $return_status);
-      if (file_exists($base_path . '/' . $doc_file . ".html")) {
-        return file_get_contents($base_path . '/' . $doc_file . ".html");
+      if (file_exists($this->uhs_migration_source_dir . '/' . $doc_file . ".html")) {
+        return file_get_contents($this->uhs_migration_source_dir . '/' . $doc_file . ".html");
       }
       return NULL;
     }
