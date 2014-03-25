@@ -59,6 +59,29 @@ class UhsMigration extends Migration {
     (array_key_exists('options', $arguments)) ? $options = $arguments['options'] : $options = array();
     (array_key_exists('fields', $arguments)) ? $fields = $arguments['fields'] : $fields = array();
 
+    //fix line endings if necessary
+    $csv_contents = file_get_contents($path);
+    $csv_contents_clean = str_replace("\r", "\n", $csv_contents);
+
+
+    if ($csv_contents <> $csv_contents_clean) {
+      $fh = fopen($path, 'w');
+      fwrite($fh, $csv_contents_clean);
+      fclose($fh);
+      drupal_set_message("Fixed line endings in $path");
+    }
+
+    // fix character encoding if necessary
+    $enc = mb_detect_encoding($csv_contents_clean, 'UTF-8');
+
+    if (!$enc) {
+      $csv_contents = mb_convert_encoding($csv_contents_clean, 'UTF-8', '');
+      $fh = fopen($path, 'w');
+      fwrite($fh, $csv_contents_clean);
+      fclose($fh);
+      drupal_set_message("Fixed character encoding in $path");
+    }
+
     $this->source = new MigrateSourceCSV($path, $csvcolumns, $options, $fields);
 
     // The destination content type.
@@ -112,6 +135,42 @@ class UhsMigration extends Migration {
       return FALSE;
     }
 
+    /*
+     * Excel uses ANSI encoding...there are weird chars in the titles of some
+     * rows.
+     *
+     * If we could figure out the proper use of
+     *   mb_convert_encoding($csv_contents_clean, 'UTF-8', '')
+     * and/or
+     *   $convmap = array(0x80, 0xff, 0, 0xff); //understand this...
+     *   $str = mb_encode_numericentity($row->title, $convmap, "ISO-8859-1");
+     * this replacement might not be necessary.
+     */
+    $ext_char_map = array(
+      208 => '--',
+      210 => '"',
+      211 => '"',
+      213 => "'",
+    );
+
+    foreach (str_split($row->title) as $char) {
+      $ascii = ord($char);
+      if ($ascii > 127) {
+        if (!in_array($ascii, array_keys($ext_char_map))) {
+          drupal_set_message("source_id=" . $row->source_id . ": Exended ASCII characters found ($ascii) : " . $row->title, "error");
+          return FALSE;
+        }
+        else {
+          $row->title = str_replace(chr($ascii), $ext_char_map[$ascii], $row->title);
+        }
+      }
+    }
+
+    // remove whitespace that could exist in the spreadsheet.
+    $elements = get_object_vars($row);
+    while (list($k, $v) = each($elements)) {
+      $row->$k = trim($v);
+    }
     /**
      * Since each migration processes one CSV file which represents one book,
      * book_id can always be 1.
@@ -124,7 +183,7 @@ class UhsMigration extends Migration {
     }
     elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
       $sp = new SourceParser($this->getHtml($row));
-      $row->body = $sp->getBody();
+      $row->body = htmlspecialchars($sp->getBody());
     }
     elseif (strtoupper($row->filename) !== 'BOOK') {
       // in this case filename indicates that the row is some type of non-importable content.
@@ -145,8 +204,9 @@ class UhsMigration extends Migration {
   }
 
   protected function getSharedFileSourceId($row) {
+    //if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
     if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
-      drupal_set_message(":" . $row->source_id . " references source_manual = " . $row->source_manual . "which could not be found.", "error");
+      drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . "which could not be found.", "error");
     }
     $source_csv_file = file($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv");
     $matches = array();
@@ -157,11 +217,11 @@ class UhsMigration extends Migration {
       }
     }
     if (count($matches) == 0) {
-      drupal_set_message(":" . $row->source_id . " references source_manual = " . $row->source_manual . " and filename = " . $row->filename . ", but " . $row->source_manual . " does not contain that file.", "error");
-      }
+      drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . " and filename = " . $row->filename . ", but " . $row->source_manual . " does not contain that file.", "error");
+    }
     elseif (count($matches) > 1) {
-      drupal_set_message(":" . $row->source_id . " references source_manual = " . $row->source_manual . " and filename = " . $row->filename . ", and " . $row->source_manual . " lists this file multiple times.", "warning");
-      }
+      drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . " and filename = " . $row->filename . ", and " . $row->source_manual . " lists this file multiple times.", "warning");
+    }
     elseif (count($matches) == 1) {
       $keys = array_keys($matches);
       return $keys[0];
@@ -182,8 +242,12 @@ class UhsMigration extends Migration {
     $dir = str_replace('.csv', '', array_pop($parts));
     $filename = array_shift(explode('.', $row->filename));
 
+    $manual_path = substr($this->source->file, 0, strlen($this->source->file) - 4); //file minus ".cvs" sould be the path to the manual
+    if (!is_dir($manual_path)) {
+      drupal_set_message("No manual directory found at $manual_path", "error");
+    }
     // Look for the file in child directories
-    $rd_iterator = new RecursiveDirectoryIterator($this->uhs_migration_source_dir);
+    $rd_iterator = new RecursiveDirectoryIterator($manual_path);
     $ritit = new RecursiveIteratorIterator($rd_iterator);
     $source_files = array('html' => array(), 'doc' => array());
     foreach ($ritit as $object_name => $file) {
@@ -206,7 +270,7 @@ class UhsMigration extends Migration {
     if ((count($source_files['doc']) == 1) && (count($source_files['html']) == 0)) {
       //exec(): support filenames and paths containing [space], ', &
       $doc_file = str_replace(' ', '\ ', escapeshellcmd(preg_replace('/.doc?/i', '', $source_files['doc'][0])));
-      drupal_set_message("Converting " . str_replace(' ', '\ ', escapeshellcmd($doc_file)) . ".doc");
+      drupal_set_message("Converting " . $doc_file . ".doc");
       $filename_escaped = str_replace(' ', '\ ', escapeshellcmd($filename));
       $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . $doc_file . ".doc --outdir " . str_replace($filename_escaped, '', $doc_file);
       $out = exec($cmd, $output, $return_status);
@@ -245,8 +309,13 @@ class UhsMigration extends Migration {
     $node->book['weight'] = $row->source_id;
 
     $parent_id = $row->parent_id;
-
-    // If there is a parent we lookup the√ migrated node
+    /*
+    if ($parent_id === NULL) {
+      //rows with filename = 'index' have empty parent_id's in some sheets. Assume these should be at the top level of the book.
+      $parent_id = $row->book_id;
+    }
+*/
+    // If there is a parent we lookup the migrated node
     if ((isset($parent_id)) && ($parent_id > 0)) {
       $parent_node = parent::handleSourceMigration($this->machineName, $parent_id);
       // We get the mlid of the migrated parent
