@@ -183,7 +183,7 @@ class UhsMigration extends Migration {
     }
     elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
       $sp = new SourceParser($this->getHtml($row));
-      $row->body = htmlspecialchars($sp->getBody());
+      $row->body = $sp->getBody();
     }
     elseif (strtoupper($row->filename) !== 'BOOK') {
       // in this case filename indicates that the row is some type of non-importable content.
@@ -202,6 +202,7 @@ class UhsMigration extends Migration {
     }
     return TRUE;
   }
+
 
   protected function getSharedFileSourceId($row) {
     //if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
@@ -263,7 +264,11 @@ class UhsMigration extends Migration {
 
     //is there an HTML version? If no, convert
     if (count($source_files['doc']) > 1) {
-      drupal_set_message($filename . ".doc found " . count($source_files['doc']) . "times.", 'error');
+      drupal_set_message($filename . ".doc found " . count($source_files['doc']) . " times.", 'error');
+      foreach ($source_files['doc'] as $doc) {
+        $ls = lstat($doc);
+        drupal_set_message("$doc size=" . $ls['size'] . " last changed= " . date("Y-m-d H:i:s", $ls['mtime']), "error");
+      }
       return NULL;
     }
 
@@ -284,8 +289,6 @@ class UhsMigration extends Migration {
     if (count($source_files['html']) == 1) {
       return file_get_contents($source_files['html'][0]);
     }
-
-
   }
 
 
