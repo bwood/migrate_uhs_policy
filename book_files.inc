@@ -208,6 +208,7 @@ class UhsMigration extends Migration {
     //if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
     if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
       drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . "which could not be found.", "error");
+      return FALSE;
     }
     $source_csv_file = file($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv");
     $matches = array();
@@ -218,10 +219,10 @@ class UhsMigration extends Migration {
       }
     }
     if (count($matches) == 0) {
-      drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . " and filename = " . $row->filename . ", but " . $row->source_manual . " does not contain that file.", "error");
+      drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".xls and filename = " . $row->filename . ", but " . $row->source_manual . ".xls does not contain that file.", "error");
     }
     elseif (count($matches) > 1) {
-      drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . " and filename = " . $row->filename . ", and " . $row->source_manual . " lists this file multiple times.", "warning");
+      drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".xls and filename = " . $row->filename . ", and " . $row->source_manual . ".xls lists this file multiple times.", "warning");
     }
     elseif (count($matches) == 1) {
       $keys = array_keys($matches);
