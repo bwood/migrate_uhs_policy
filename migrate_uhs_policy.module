@@ -83,6 +83,12 @@ function migrate_uhs_policy_register_migrations() {
       'path' => variable_get('uhs_migration_source', '/tmp') . '/Primary & Urgent Care.csv',
     ),
     array(
+      'machine_name' => 'CARE',
+      'class_name' => 'UhsMigration',
+      'description' => t('Import Care manual'),
+      'path' => variable_get('uhs_migration_source', '/tmp') . '/CARE.csv',
+    ),
+    array(
       'machine_name' => 'Used_in_Multi_DONT_RUN',
       'class_name' => 'UhsMigration',
       'description' => t('Do not run this one.'),
