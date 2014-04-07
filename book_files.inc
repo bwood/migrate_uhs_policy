@@ -247,6 +247,7 @@ class UhsMigration extends Migration {
     $manual_path = substr($this->source->file, 0, strlen($this->source->file) - 4); //file minus ".cvs" sould be the path to the manual
     if (!is_dir($manual_path)) {
       drupal_set_message("No manual directory found at $manual_path", "error");
+      return FALSE;
     }
     // Look for the file in child directories
     $rd_iterator = new RecursiveDirectoryIterator($manual_path);
@@ -255,6 +256,9 @@ class UhsMigration extends Migration {
     foreach ($ritit as $object_name => $file) {
       //if ($file->isDir()) continue;
       $fn = $file->getFilename();
+      if (($fn == '.') || ($fn == '..')) {
+        continue;
+      }
       if ($file->getFilename() == $filename . '.html') {
         $source_files['html'][] = $file->getPathName();
       }
@@ -276,7 +280,7 @@ class UhsMigration extends Migration {
     if ((count($source_files['doc']) == 1) && (count($source_files['html']) == 0)) {
       //exec(): support filenames and paths containing [space], ', &
       $doc_file = str_replace(' ', '\ ', escapeshellcmd(preg_replace('/.doc?/i', '', $source_files['doc'][0])));
-      drupal_set_message("Converting " . $doc_file . ".doc");
+      //drupal_set_message("Converting " . $doc_file . ".doc");
       $filename_escaped = str_replace(' ', '\ ', escapeshellcmd($filename));
       $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . $doc_file . ".doc --outdir " . str_replace($filename_escaped, '', $doc_file);
       $out = exec($cmd, $output, $return_status);
