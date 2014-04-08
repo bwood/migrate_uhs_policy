@@ -89,6 +89,24 @@ function migrate_uhs_policy_register_migrations() {
       'path' => variable_get('uhs_migration_source', '/tmp') . '/CARE.csv',
     ),
     array(
+      'machine_name' => 'Clinic_Assistant',
+      'class_name' => 'UhsMigration',
+      'description' => t('Import Clinic Assistant manual'),
+      'path' => variable_get('uhs_migration_source', '/tmp') . '/Clinic Assistant.csv',
+    ),
+    array(
+      'machine_name' => 'Clinic_Nurse_Resource',
+      'class_name' => 'UhsMigration',
+      'description' => t('Import Clinic Nurse Resourse manual'),
+      'path' => variable_get('uhs_migration_source', '/tmp') . '/Clinic Nurse Resource.csv',
+    ),
+    array(
+      'machine_name' => 'CORE',
+      'class_name' => 'UhsMigration',
+      'description' => t('Import CORE manual'),
+      'path' => variable_get('uhs_migration_source', '/tmp') . '/CORE.csv',
+    ),
+    array(
       'machine_name' => 'Used_in_Multi_DONT_RUN',
       'class_name' => 'UhsMigration',
       'description' => t('Do not run this one.'),
