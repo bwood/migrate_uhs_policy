@@ -348,9 +348,19 @@ class UhsMigration extends Migration {
       $node->book['plid'] = $plid;
     }
 
-    _book_update_outline($node);
-    node_save($node);
+    /*
+     * Only update the book toc and save the node if this nid is not already part of this book
+     */
+    $query2 = db_select("book", "b")
+      ->fields("b")
+      ->where("b.nid = :nid AND b.bid = :book_id", array(":nid" => $node->nid, ":book_id" => $book_id))
+      ->execute()
+      ->fetchAssoc();
 
+    if ($query2 === FALSE) {
+      _book_update_outline($node);
+      node_save($node);
+    }
   }
 
   protected function createStub($migration, array $source_id) {
