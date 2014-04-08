@@ -157,7 +157,7 @@ class UhsMigration extends Migration {
       $ascii = ord($char);
       if ($ascii > 127) {
         if (!in_array($ascii, array_keys($ext_char_map))) {
-          drupal_set_message("source_id=" . $row->source_id . ": Exended ASCII characters found ($ascii) : " . $row->title, "error");
+          drupal_set_message("========> source_id=" . $row->source_id . ": Exended ASCII characters found ($ascii) : " . $row->title, "error");
           return FALSE;
         }
         else {
@@ -187,24 +187,27 @@ class UhsMigration extends Migration {
     }
     elseif (strtoupper($row->filename) !== 'BOOK') {
       // in this case filename indicates that the row is some type of non-importable content.
-      $row->body = "The content for this page is '" . $row->filename . "'.  This type of content will be migrated in a future phase of the project.";
+      $row->body = "Error: The content for this page is '" . $row->filename . "'.  This type of content will be migrated in a future phase of the project.";
     }
 
     if (!empty($row->source_manual)) {
       $source_machine_name = $this->translations[$row->source_manual];
-      $file_source_id = $this->getSharedFileSourceId($row);
+      $file_source_id = $this->getSharedFileSourceIdorError($row);
       // shared_page created here. doesn't come from csv file.
       $row->shared_page = NULL;
-      if ($file_source_id !== FALSE) {
+      if (is_int($file_source_id)) {
         $source_page_nid = parent::handleSourceMigration($source_machine_name, $file_source_id);
         $row->shared_page = $source_page_nid;
+      }
+      else {
+        $row->body = "Error: Correction needed in CSV Structure: " . $file_source_id;
       }
     }
     return TRUE;
   }
 
 
-  protected function getSharedFileSourceId($row) {
+  protected function getSharedFileSourceIdorError($row) {
     //if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
     if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
       drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . "which could not be found.", "error");
@@ -219,16 +222,17 @@ class UhsMigration extends Migration {
       }
     }
     if (count($matches) == 0) {
-      drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".xls and filename = " . $row->filename . ", but " . $row->source_manual . ".xls does not contain that file.", "error");
+      $error = "source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".xls and filename = " . $row->filename . ", but " . $row->source_manual . ".xls does not contain that file.";
     }
     elseif (count($matches) > 1) {
-      drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".xls and filename = " . $row->filename . ", and " . $row->source_manual . ".xls lists this file multiple times.", "warning");
+      $error = "source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".xls and filename = " . $row->filename . ", and " . $row->source_manual . ".xls lists this file multiple times.";
     }
     elseif (count($matches) == 1) {
       $keys = array_keys($matches);
       return $keys[0];
     }
-    return FALSE;
+    drupal_set_message($error, "error");
+    return $error;
   }
 
   protected function getHtml($row) {
@@ -267,7 +271,8 @@ class UhsMigration extends Migration {
       }
     }
 
-    //is there an HTML version? If no, convert
+
+    // >1 doc file with same name
     if (count($source_files['doc']) > 1) {
       drupal_set_message($filename . ".doc found " . count($source_files['doc']) . " times.", 'error');
       foreach ($source_files['doc'] as $doc) {
@@ -277,6 +282,7 @@ class UhsMigration extends Migration {
       return NULL;
     }
 
+    //is there an HTML version? If no, convert
     if ((count($source_files['doc']) == 1) && (count($source_files['html']) == 0)) {
       //exec(): support filenames and paths containing [space], ', &
       $doc_file = str_replace(' ', '\ ', escapeshellcmd(preg_replace('/.doc?/i', '', $source_files['doc'][0])));
@@ -284,8 +290,12 @@ class UhsMigration extends Migration {
       $filename_escaped = str_replace(' ', '\ ', escapeshellcmd($filename));
       $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . $doc_file . ".doc --outdir " . str_replace($filename_escaped, '', $doc_file);
       $out = exec($cmd, $output, $return_status);
-      if (file_exists($this->uhs_migration_source_dir . '/' . $doc_file . ".html")) {
-        return file_get_contents($this->uhs_migration_source_dir . '/' . $doc_file . ".html");
+      $html_file = stripslashes($doc_file) . ".html";
+      if (file_exists($html_file)) {
+        return file_get_contents($html_file);
+      }
+      else {
+        drupal_set_message("Converted html not found at: " . $html_file, "error");
       }
       return NULL;
     }
