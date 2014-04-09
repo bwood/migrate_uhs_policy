@@ -245,10 +245,10 @@ class UhsMigration extends Migration {
       }
     }
     if (count($matches) == 0) {
-      $error = "source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".xls and filename = " . $row->filename . ", but " . $row->source_manual . ".xls does not contain that file.";
+      $error = "source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", but " . $row->source_manual . ".csv does not contain that file.";
     }
     elseif (count($matches) > 1) {
-      $error = "source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".xls and filename = " . $row->filename . ", and " . $row->source_manual . ".xls lists this file multiple times.";
+      $error = "source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", and " . $row->source_manual . ".csv lists this file multiple times.";
     }
     elseif (count($matches) == 1) {
       $keys = array_keys($matches);
