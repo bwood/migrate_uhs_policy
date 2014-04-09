@@ -127,13 +127,13 @@ class UhsMigration extends Migration {
     $this->addFieldMapping('title', 'title');
   }
 
-  /**
-   * Prepare a row.
-   */
-  public function prepareRow($row) {
-    if ((empty($row->title)) || (empty($row->filename))) {
-      return FALSE;
-    }
+  public function translateAscii($string, $row) {
+
+    /*
+     * Don't work on 'filename' by defualt. Event if filename has ext ascii
+     * it will match a filename value with the same ext ascii in another sheet
+     * which we want.
+     */
 
     /*
      * Excel uses ANSI encoding...there are weird chars in the titles of some
@@ -147,23 +147,35 @@ class UhsMigration extends Migration {
      * this replacement might not be necessary.
      */
     $ext_char_map = array(
+      202 => '-unknown "E" character-',
       208 => '--',
       210 => '"',
       211 => '"',
       213 => "'",
     );
 
-    foreach (str_split($row->title) as $char) {
+    foreach (str_split($string) as $char) {
       $ascii = ord($char);
       if ($ascii > 127) {
         if (!in_array($ascii, array_keys($ext_char_map))) {
-          drupal_set_message("========> source_id=" . $row->source_id . ": Exended ASCII characters found ($ascii) : " . $row->title, "error");
+          drupal_set_message("========> source_id=" . $row->source_id . ": Exended ASCII characters found ($ascii)", "error");
           return FALSE;
         }
         else {
-          $row->title = str_replace(chr($ascii), $ext_char_map[$ascii], $row->title);
+          $string = str_replace(chr($ascii), $ext_char_map[$ascii], $string);
         }
       }
+    }
+
+    return $string;
+  }
+
+  /**
+   * Prepare a row.
+   */
+  public function prepareRow($row) {
+    if ((empty($row->title)) || (empty($row->filename))) {
+      return FALSE;
     }
 
     // remove whitespace that could exist in the spreadsheet.
@@ -171,23 +183,34 @@ class UhsMigration extends Migration {
     while (list($k, $v) = each($elements)) {
       $row->$k = trim($v);
     }
-    /**
+
+    /*
      * Since each migration processes one CSV file which represents one book,
      * book_id can always be 1.
      */
     $row->book_id = 1;
 
+    /*
+     * Deal with weird ascii characters
+     */
+    $row->title = $this->translateAscii($row->title, $row);
+    $row->source_manual = $this->translateAscii($row->source_manual, $row);
+
+    $file_ext = strtolower(array_pop(explode('.', $row->filename)));
+    $ext_supported = array('doc', 'docx');
+
     if (strpos(strtoupper($row->filename), 'INDEX') !== FALSE) {
       //Index pages for Allergy manual shouldn't have content
       $row->body = NULL;
     }
-    elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
+    //elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
+    elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && (in_array($file_ext, $ext_supported))) {
       $sp = new SourceParser($this->getHtml($row));
       $row->body = $sp->getBody();
     }
     elseif (strtoupper($row->filename) !== 'BOOK') {
       // in this case filename indicates that the row is some type of non-importable content.
-      $row->body = "Error: The content for this page is '" . $row->filename . "'.  This type of content will be migrated in a future phase of the project.";
+      $row->body = "Error: The content for this page is '" . $this->translateAscii($row->filename, $row) . "'.  This type of content will be migrated in a future phase of the project.";
     }
 
     if (!empty($row->source_manual)) {
