@@ -127,6 +127,26 @@ class UhsMigration extends Migration {
     $this->addFieldMapping('title', 'title');
   }
 
+  public function preImport() {
+    parent::preImport();
+    // Code to execute before first article row is imported
+    /*
+     * Prevents:
+     *
+Migration failed with source plugin exception: Illegal string offset 'value'                               [error]
+File
+/Users/bwood/Sites/pantheon/uhs-policy2/profiles/openberkeley/modules/contrib/media/modules/media_wysiwyg/includes/media_wysiwyg.file_usage.inc,
+line 95
+     */
+    module_disable(array('media_wysiwyg'));
+  }
+
+  public function postImport() {
+    parent::postImport();
+    // Code to execute before first article row is imported
+    module_enable(array('media_wysiwyg'));
+  }
+
   public function translateAscii($string, $row) {
 
     /*
@@ -199,20 +219,7 @@ class UhsMigration extends Migration {
     $file_ext = strtolower(array_pop(explode('.', $row->filename)));
     $ext_supported = array('doc', 'docx');
 
-    if (strpos(strtoupper($row->filename), 'INDEX') !== FALSE) {
-      //Index pages for Allergy manual shouldn't have content
-      $row->body = NULL;
-    }
-    //elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
-    elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && (in_array($file_ext, $ext_supported))) {
-      $sp = new SourceParser($this->getHtml($row));
-      $row->body = $sp->getBody();
-    }
-    elseif (strtoupper($row->filename) !== 'BOOK') {
-      // in this case filename indicates that the row is some type of non-importable content.
-      $row->body = "Error: The content for this page is '" . $this->translateAscii($row->filename, $row) . "'.  This type of content will be migrated in a future phase of the project.";
-    }
-
+    // Is this a shared file?
     if (!empty($row->source_manual)) {
       $source_machine_name = $this->translations[$row->source_manual];
       $file_source_id = $this->getSharedFileSourceIdorError($row);
@@ -225,6 +232,21 @@ class UhsMigration extends Migration {
       else {
         $row->body = "Error: Correction needed in CSV Structure: " . $file_source_id;
       }
+      return TRUE;
+    }
+
+    if (strpos(strtoupper($row->filename), 'INDEX') !== FALSE) {
+      //Index pages for Allergy manual shouldn't have content
+      $row->body = NULL;
+    }
+    //elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
+    elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && (in_array($file_ext, $ext_supported))) {
+      $sp = new SourceParser($this->getHtml($row));
+      $row->body = $sp->getBody();
+    }
+    elseif (strtoupper($row->filename) !== 'BOOK') {
+      // in this case filename indicates that the row is some type of non-importable content.
+      $row->body = "Error: The content for this page is '" . $this->translateAscii($row->filename, $row) . "'.  This type of content will be migrated in a future phase of the project.";
     }
     return TRUE;
   }
