@@ -273,9 +273,19 @@ class UhsMigration extends Migration {
 
     $manual_path = substr($this->source->file, 0, strlen($this->source->file) - 4); //file minus ".cvs" sould be the path to the manual
     if (!is_dir($manual_path)) {
-      drupal_set_message("No manual directory found at $manual_path", "error");
-      return FALSE;
+      $error = "No manual directory found at $manual_path";
+      drupal_set_message($error, "error");
+      //wrap in body tags so query parser will put it in the node body
+      return '<html><body>' . $error . '</body></html>';
     }
+
+    if (!file_exists($manual_path . '/' . $row->filename)) {
+      $error = "source_id=" . $row->source_id . " references file_name = " . $row->filename . " but this file does not exist in the folder " . $manual_path . ".";
+      drupal_set_message($error, "error");
+      //wrap in body tags so query parser will put it in the node body
+      return '<html><body>' . $error . '</body></html>';
+    }
+
     // Look for the file in child directories
     $rd_iterator = new RecursiveDirectoryIterator($manual_path);
     $ritit = new RecursiveIteratorIterator($rd_iterator);
@@ -293,7 +303,6 @@ class UhsMigration extends Migration {
         $source_files['doc'][] = $file->getPathName();
       }
     }
-
 
     // >1 doc file with same name
     if (count($source_files['doc']) > 1) {
