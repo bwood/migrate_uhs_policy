@@ -167,7 +167,7 @@ line 95
      * this replacement might not be necessary.
      */
     $ext_char_map = array(
-      202 => '-unknown "E" character-',
+      202 => '-E-',
       208 => '--',
       210 => '"',
       211 => '"',
@@ -267,10 +267,10 @@ line 95
       }
     }
     if (count($matches) == 0) {
-      $error = "source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", but " . $row->source_manual . ".csv does not contain that file.";
+      $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", but " . $row->source_manual . ".csv does not contain that file.";
     }
     elseif (count($matches) > 1) {
-      $error = "source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", and " . $row->source_manual . ".csv lists this file multiple times.";
+      $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", and " . $row->source_manual . ".csv lists this file multiple times.";
     }
     elseif (count($matches) == 1) {
       $keys = array_keys($matches);
@@ -301,13 +301,6 @@ line 95
       return '<html><body>' . $error . '</body></html>';
     }
 
-    if (!file_exists($manual_path . '/' . $row->filename)) {
-      $error = "source_id=" . $row->source_id . " references file_name = " . $row->filename . " but this file does not exist in the folder " . $manual_path . ".";
-      drupal_set_message($error, "error");
-      //wrap in body tags so query parser will put it in the node body
-      return '<html><body>' . $error . '</body></html>';
-    }
-
     // Look for the file in child directories
     $rd_iterator = new RecursiveDirectoryIterator($manual_path);
     $ritit = new RecursiveIteratorIterator($rd_iterator);
@@ -326,14 +319,23 @@ line 95
       }
     }
 
+    // File not found
+    if ((count($source_files['doc']) == 0) && (count($source_files['html']) == 0)) {
+      $error = "Error: source_id=" . $row->source_id . " references file_name = " . $row->filename . " but this file does not exist in the folder " . $manual_path . " nor in any of its sub folders.";
+      drupal_set_message($error, "error");
+      //wrap in body tags so query parser will put it in the node body
+      return '<html><body>' . $error . '</body></html>';
+    }
+
     // >1 doc file with same name
     if (count($source_files['doc']) > 1) {
-      drupal_set_message($filename . ".doc found " . count($source_files['doc']) . " times.", 'error');
+      $error = "Error: " . $filename . ".doc found " . count($source_files['doc']) . " times.";
       foreach ($source_files['doc'] as $doc) {
         $ls = lstat($doc);
-        drupal_set_message("$doc size=" . $ls['size'] . " last changed= " . date("Y-m-d H:i:s", $ls['mtime']), "error");
+        $error .= "\n$doc size=" . $ls['size'] . " last changed= " . date("Y-m-d H:i:s", $ls['mtime']);
       }
-      return NULL;
+      drupal_set_message($error, 'error');
+      return '<html><body>' . $error . '</body></html>';
     }
 
     //is there an HTML version? If no, convert
@@ -349,9 +351,10 @@ line 95
         return file_get_contents($html_file);
       }
       else {
-        drupal_set_message("Converted html not found at: " . $html_file, "error");
+        $error = "Converted html not found at: " . $html_file;
+        drupal_set_message($error, "error");
+        return '<html><body>' . $error . '</body></html>';
       }
-      return NULL;
     }
 
     // if the .html verison exists, re-import it
