@@ -107,9 +107,9 @@ function migrate_uhs_policy_register_migrations() {
       'path' => variable_get('uhs_migration_source', '/tmp') . '/CORE.csv',
     ),
     array(
-      'machine_name' => 'Used_in_Multi_DONT_RUN',
+      'machine_name' => 'Used_in_Multiple_Manuals',
       'class_name' => 'UhsMigration',
-      'description' => t('Do not run this one.'),
+      'description' => t('Used in Multiple Manuals is for shared pages.'),
       'path' => variable_get('uhs_migration_source', '/tmp') . '/Used in Multiple Manuals.csv',
     ),
   );
