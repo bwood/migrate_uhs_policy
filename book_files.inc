@@ -178,7 +178,7 @@ line 95
       $ascii = ord($char);
       if ($ascii > 127) {
         if (!in_array($ascii, array_keys($ext_char_map))) {
-          drupal_set_message("========> source_id=" . $row->source_id . ": Exended ASCII characters found ($ascii)", "error");
+          drupal_set_message("========> Error: source_id=" . $row->source_id . ": Exended ASCII characters found ($ascii)", "error");
           return FALSE;
         }
         else {
@@ -351,7 +351,7 @@ line 95
         return file_get_contents($html_file);
       }
       else {
-        $error = "Converted html not found at: " . $html_file;
+        $error = "========> Error: Converted html not found at: " . $html_file;
         drupal_set_message($error, "error");
         return '<html><body>' . $error . '</body></html>';
       }
