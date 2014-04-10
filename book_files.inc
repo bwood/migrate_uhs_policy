@@ -68,7 +68,7 @@ class UhsMigration extends Migration {
       $fh = fopen($path, 'w');
       fwrite($fh, $csv_contents_clean);
       fclose($fh);
-      drupal_set_message("Fixed line endings in $path");
+      $this->uhsSetMessage("Fixed line endings in $path");
     }
 
     // fix character encoding if necessary
@@ -79,7 +79,7 @@ class UhsMigration extends Migration {
       $fh = fopen($path, 'w');
       fwrite($fh, $csv_contents_clean);
       fclose($fh);
-      drupal_set_message("Fixed character encoding in $path");
+      $this->uhsSetMessage("Fixed character encoding in $path");
     }
 
     $this->source = new MigrateSourceCSV($path, $csvcolumns, $options, $fields);
@@ -127,6 +127,15 @@ class UhsMigration extends Migration {
     $this->addFieldMapping('title', 'title');
   }
 
+  public function uhsSetMessage($msg, $type) {
+    if (!isset($type)) {
+      if (strpos($msg, 'Error: ') === FALSE) {
+        $msg = "$type: $msg";
+      }
+    }
+    print "\n$msg\n";
+  }
+  
   public function preImport() {
     parent::preImport();
     // Code to execute before first article row is imported
@@ -180,7 +189,7 @@ line 95
       $ascii = ord($char);
       if ($ascii > 127) {
         if (!in_array($ascii, array_keys($ext_char_map))) {
-          drupal_set_message("========> Error: source_id=" . $row->source_id . ": Exended ASCII characters found ($ascii)", "error");
+          $this->uhsSetMessage("========> Error: source_id=" . $row->source_id . ": Exended ASCII characters found ($ascii)", "error");
           return FALSE;
         }
         else {
@@ -257,7 +266,7 @@ line 95
   protected function getSharedFileSourceIdorError($row) {
     //if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
     if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
-      drupal_set_message("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . "which could not be found.", "error");
+      $this->uhsSetMessage("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . "which could not be found.", "error");
       return FALSE;
     }
     $source_csv_file = file($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv");
@@ -278,7 +287,7 @@ line 95
       $keys = array_keys($matches);
       return $keys[0];
     }
-    drupal_set_message($error, "error");
+    $this->uhsSetMessage($error, "error");
     return $error;
   }
 
@@ -298,7 +307,7 @@ line 95
     $manual_path = substr($this->source->file, 0, strlen($this->source->file) - 4); //file minus ".cvs" sould be the path to the manual
     if (!is_dir($manual_path)) {
       $error = "No manual directory found at $manual_path";
-      drupal_set_message($error, "error");
+      $this->uhsSetMessage($error, "error");
       //wrap in body tags so query parser will put it in the node body
       return '<html><body>' . $error . '</body></html>';
     }
@@ -325,7 +334,7 @@ line 95
     // File not found
     if ((count($source_files['doc']) == 0) && (count($source_files['html']) == 0)) {
       $error = "Error: source_id=" . $row->source_id . " references file_name = " . $row->filename . " but this file does not exist in the folder " . $manual_path . " nor in any of its sub folders.";
-      drupal_set_message($error, "error");
+      $this->uhsSetMessage($error, "error");
       //wrap in body tags so query parser will put it in the node body
       return '<html><body>' . $error . '</body></html>';
     }
@@ -337,7 +346,7 @@ line 95
         $ls = lstat($doc);
         $error .= "\n$doc size=" . $ls['size'] . " last changed= " . date("Y-m-d H:i:s", $ls['mtime']);
       }
-      drupal_set_message($error, 'error');
+      $this->uhsSetMessage($error, 'error');
       return '<html><body>' . $error . '</body></html>';
     }
 
@@ -345,7 +354,7 @@ line 95
     if ((count($source_files['doc']) == 1) && (count($source_files['html']) == 0)) {
       //exec(): support filenames and paths containing [space], ', &
       $doc_file = str_replace(' ', '\ ', escapeshellcmd(preg_replace('/.doc?/i', '', $source_files['doc'][0])));
-      //drupal_set_message("Converting " . $doc_file . ".doc");
+      //$this->uhsSetMessage("Converting " . $doc_file . ".doc");
       $filename_escaped = str_replace(' ', '\ ', escapeshellcmd($filename));
       $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . $doc_file . ".doc --outdir " . str_replace($filename_escaped, '', $doc_file);
       $out = exec($cmd, $output, $return_status);
@@ -355,7 +364,7 @@ line 95
       }
       else {
         $error = "========> Error: Converted html not found at: " . $html_file;
-        drupal_set_message($error, "error");
+        $this->uhsSetMessage($error, "error");
         return '<html><body>' . $error . '</body></html>';
       }
     }
