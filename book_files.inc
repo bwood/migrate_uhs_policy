@@ -139,12 +139,14 @@ File
 line 95
      */
     module_disable(array('media_wysiwyg'));
+    //drupal_get_messages('error', false); //would be nice to kill that set_message
   }
 
   public function postImport() {
     parent::postImport();
     // Code to execute before first article row is imported
     module_enable(array('media_wysiwyg'));
+    //drupal_get_messages('error', false); //would be nice to kill that set_message
   }
 
   public function translateAscii($string, $row) {
@@ -235,7 +237,7 @@ line 95
       return TRUE;
     }
 
-    if (strpos(strtoupper($row->filename), 'INDEX') !== FALSE) {
+    if ((strpos(strtoupper($row->filename), 'INDEX') !== FALSE) || (strtoupper($row->filename) == 'BOOK')) {
       //Index pages for Allergy manual shouldn't have content
       $row->body = NULL;
     }
@@ -244,7 +246,7 @@ line 95
       $sp = new SourceParser($this->getHtml($row));
       $row->body = $sp->getBody();
     }
-    elseif (strtoupper($row->filename) !== 'BOOK') {
+    else {
       // in this case filename indicates that the row is some type of non-importable content.
       $row->body = "Error: The content for this page is '" . $this->translateAscii($row->filename, $row) . "'.  This type of content will be migrated in a future phase of the project.";
     }
@@ -314,7 +316,8 @@ line 95
       if ($file->getFilename() == $filename . '.html') {
         $source_files['html'][] = $file->getPathName();
       }
-      if ($file->getFilename() == $filename . '.doc') {
+      if ((strtolower($file->getFilename()) == strtolower($filename . '.doc')) ||
+         (strtolower($file->getFilename()) == strtolower($filename . '.docx'))) {
         $source_files['doc'][] = $file->getPathName();
       }
     }
