@@ -59,16 +59,24 @@ class UhsMigration extends Migration {
     (array_key_exists('options', $arguments)) ? $options = $arguments['options'] : $options = array();
     (array_key_exists('fields', $arguments)) ? $fields = $arguments['fields'] : $fields = array();
 
+    /*
     //fix line endings if necessary
     $csv_contents = file_get_contents($path);
-    $csv_contents_clean = str_replace("\r", "\n", $csv_contents);
+    if (strpos($csv_contents, "\r\n") !== FALSE) {
+      $csv_contents_clean = str_replace("\r\n", "\n", $csv_contents);
+    }
+
+    if (strpos($csv_contents, "\r") !== FALSE) {
+      $csv_contents_clean = str_replace("\r", "\n", $csv_contents);
+    }
+    */
 
 
     if ($csv_contents <> $csv_contents_clean) {
       $fh = fopen($path, 'w');
       fwrite($fh, $csv_contents_clean);
       fclose($fh);
-      $this->uhsSetMessage("Fixed line endings in $path");
+      $this->uhsSetMessage("Fixed line endings in $path", "INFO");
     }
 
     // fix character encoding if necessary
@@ -179,6 +187,7 @@ line 95
      */
     $ext_char_map = array(
       202 => '-E-',
+      205 => '-I-',
       208 => '--',
       210 => '"',
       211 => '"',
@@ -189,7 +198,7 @@ line 95
       $ascii = ord($char);
       if ($ascii > 127) {
         if (!in_array($ascii, array_keys($ext_char_map))) {
-          $this->uhsSetMessage("========> Error: source_id=" . $row->source_id . ": Exended ASCII characters found ($ascii)", "error");
+          $this->uhsSetMessage("========> Error: source_id=" . $row->source_id . ": Extended ASCII characters found ($ascii)", "error");
           return FALSE;
         }
         else {
