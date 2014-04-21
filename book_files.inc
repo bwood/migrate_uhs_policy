@@ -186,12 +186,15 @@ line 95
      * this replacement might not be necessary.
      */
     $ext_char_map = array(
-      202 => '-E-',
-      205 => '-I-',
+      202 => '=E',
+      205 => '=I',
       208 => '--',
       210 => '"',
       211 => '"',
       213 => "'",
+      230 => '=A',
+      238 => '=I',
+      241 => '=N',
     );
 
     foreach (str_split($string) as $char) {
@@ -362,12 +365,12 @@ line 95
     //is there an HTML version? If no, convert
     if ((count($source_files['doc']) == 1) && (count($source_files['html']) == 0)) {
       //exec(): support filenames and paths containing [space], ', &
-      $doc_file = str_replace(' ', '\ ', escapeshellcmd(preg_replace('/.doc?/i', '', $source_files['doc'][0])));
-      //$this->uhsSetMessage("Converting " . $doc_file . ".doc");
+      $filewithpath_escaped = str_replace(' ', '\ ', escapeshellcmd(preg_replace('/\.doc[x]?+/i', '', $source_files['doc'][0])));
       $filename_escaped = str_replace(' ', '\ ', escapeshellcmd($filename));
-      $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . $doc_file . ".doc --outdir " . str_replace($filename_escaped, '', $doc_file);
+      $docfile_escaped = str_replace(' ', '\ ', escapeshellcmd($source_files['doc'][0]));
+      $cmd = $path_soffice . ' ' . $cmd_soffice . ' ' . $docfile_escaped . " --outdir " . str_replace($filename_escaped, '', $filewithpath_escaped);
       $out = exec($cmd, $output, $return_status);
-      $html_file = stripslashes($doc_file) . ".html";
+      $html_file = stripslashes($filewithpath_escaped) . ".html";
       if (file_exists($html_file)) {
         return file_get_contents($html_file);
       }
