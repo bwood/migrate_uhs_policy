@@ -186,6 +186,7 @@ line 95
      * this replacement might not be necessary.
      */
     $ext_char_map = array(
+      131 => '=F',
       202 => '=E',
       205 => '=I',
       208 => '--',
