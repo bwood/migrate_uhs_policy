@@ -185,28 +185,41 @@ line 95
      *   $str = mb_encode_numericentity($row->title, $convmap, "ISO-8859-1");
      * this replacement might not be necessary.
      */
-    $ext_char_map = array(
+
+    // Charters that you don't want to see on the site
+    $ugly_char_map = array(
       131 => '=F',
       202 => '=E',
       205 => '=I',
-      208 => '--',
-      210 => '"',
-      211 => '"',
-      213 => "'",
       230 => '=A',
       238 => '=I',
       241 => '=N',
     );
 
+    // Characters that are okay to see on the site
+    $char_map = array(
+      208 => '--',
+      210 => '"',
+      211 => '"',
+      213 => "'",
+    );
+
+    $ext_char_map = $char_map + $ugly_char_map;
+
     foreach (str_split($string) as $char) {
       $ascii = ord($char);
       if ($ascii > 127) {
+        $string_old = $string;
         if (!in_array($ascii, array_keys($ext_char_map))) {
           $this->uhsSetMessage("========> Error: source_id=" . $row->source_id . ": Extended ASCII characters found ($ascii)", "error");
           return FALSE;
         }
         else {
           $string = str_replace(chr($ascii), $ext_char_map[$ascii], $string);
+        }
+        // Notify the user about ugly chars in the title.
+        if (($string_old == $row->title) && (in_array($ascii, array_keys($ugly_char_map)))) {
+          $this->uhsSetMessage("Error: source_id=" . $row->source_id . ": Page title contains extended ASCII characters. Translated to: $string", "error");
         }
       }
     }
