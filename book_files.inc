@@ -256,7 +256,7 @@ line 95
     $file_ext = strtolower(array_pop(explode('.', $row->filename)));
     $ext_supported = array('doc', 'docx');
 
-    // Is this a shared file?
+    // Is this a shared page?
     if (!empty($row->source_manual)) {
       $source_machine_name = $this->translations[$row->source_manual];
       $file_source_id = $this->getSharedFileSourceIdorError($row);
@@ -267,7 +267,8 @@ line 95
         $row->shared_page = $source_page_nid;
       }
       else {
-        $row->body = "Error: Correction needed in CSV Structure: " . $file_source_id;
+        //If it's not an int, it's some kind of error
+        $row->body = "========> Error: Correction needed in CSV Structure: " . $file_source_id;
       }
       return TRUE;
     }

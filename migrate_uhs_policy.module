@@ -61,9 +61,41 @@ function migrate_uhs_policy_register_migrations() {
   /*** Manuals ***/
   $common_arguments['group_name'] = "Manuals";
   $common_arguments['translations'] = array(
+    'Allergy and Travel' => 'Allergy_and_Travel',
+    'Care' => 'Care',
+    'Clinic Assistant' => 'Clinic_Assistant',
+    'Clinic Nurse Resource' => 'Clinic_Nurse_Resource',
+    'CORE' => 'Core',
+    'Counseling and Psychological Services' => 'Counseling_and_Psychological_Services',
+    'Disability Management' => 'Disability_Management',
+    'Facilities' => 'Facilities',
+    'Health Net' => 'Health_Net',
+    'Health Promotion' => 'Health_Promotion',
+    'Health, Safety and Security' => 'Health_Safety_Security',
+    'Infection Control' => 'Infection_Control',
+    'Laboratory' => 'Laboratory',
+    'Medical Records' => 'Medical_Records',
+    'Occupational Health' => 'Occupational_Health',
+    'Pharmacy' => 'Pharmacy',
+    'Physical Therapby' => 'Physical_Therapy',
     'Primary & Urgent Care' => 'Primary_and_Urgent_Care',
+    'Quality Improvement' => 'Quality_Improvement',
+    'Radiology' => 'Radiology',
+    'Risk Management' => 'Risk_Management',
+    'SHIP' => 'SHIP',
+    'Social Services' => 'Social_Services',
+    'Specialty' => 'Specialty',
+    'Sports Medicine' => 'Sports_Medicine',
+    'Urgent Care RN Standing Orders' => 'Urgent_Care_RN_Standing_Orders',
+    'Used in Multiple Manuals' => 'Used_in_Multiple_Manuals',
   );
   $manuals_arguments = array(
+    array(
+      'machine_name' => 'Used_in_Multiple_Manuals',
+      'class_name' => 'UhsMigration',
+      'description' => t('Import Used in Multiple Manuals (shared pages)'),
+      'path' => variable_get('uhs_migration_source', '/tmp') . '/Used in Multiple Manuals.csv',
+    ),
     array(
       'machine_name' => 'Allergy_and_Travel',
       'class_name' => 'UhsMigration',
