@@ -59,9 +59,36 @@ class UhsMigration extends Migration {
     (array_key_exists('options', $arguments)) ? $options = $arguments['options'] : $options = array();
     (array_key_exists('fields', $arguments)) ? $fields = $arguments['fields'] : $fields = array();
 
+    /*
+     * Remove empty lines if any exist
+     * Empty lines will cause
+     * Migration failed with source plugin exception
+     * : SQLSTATE[HY000]: General error:[error]
+     * 1366 Incorrect integer value: '' for column 'sourceid1' at row 1
+     */
+    $csv_contents = file($path);
+    $csv_contents_clean = array();
+    foreach ($csv_contents as $line) {
+      if (preg_match("/^,+/", $line) === 0){
+        $csv_contents_clean[] = $line;
+      }
+      else {
+        $x=1;
+      }
+    }
+
+    if (count(array_diff($csv_contents, $csv_contents_clean)) > 0) {
+      $fh = fopen($path, 'w');
+      foreach ($csv_contents_clean as $line) {
+        fwrite($fh, $line);
+      }
+      fclose($fh);
+      $this->uhsSetMessage("Removed empty lines in $path", "INFO");
+    }
+
+    $csv_contents_clean = file_get_contents($path);
     // fix character encoding if necessary
     $enc = mb_detect_encoding($csv_contents_clean, 'UTF-8');
-
     if (!$enc) {
       $csv_contents = mb_convert_encoding($csv_contents_clean, 'UTF-8', '');
       $fh = fopen($path, 'w');
@@ -69,6 +96,7 @@ class UhsMigration extends Migration {
       fclose($fh);
       $this->uhsSetMessage("Fixed character encoding in $path");
     }
+
 
     $this->source = new MigrateSourceCSV($path, $csvcolumns, $options, $fields);
 
@@ -123,7 +151,7 @@ class UhsMigration extends Migration {
     }
     print "\n$msg\n";
   }
-  
+
   public function preImport() {
     parent::preImport();
     // Code to execute before first article row is imported
@@ -333,7 +361,8 @@ line 95
         $source_files['html'][] = $file->getPathName();
       }
       if ((strtolower($file->getFilename()) == strtolower($filename . '.doc')) ||
-         (strtolower($file->getFilename()) == strtolower($filename . '.docx'))) {
+        (strtolower($file->getFilename()) == strtolower($filename . '.docx'))
+      ) {
         $source_files['doc'][] = $file->getPathName();
       }
     }
