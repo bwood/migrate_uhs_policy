@@ -199,9 +199,10 @@ line 95
       131 => '=F',
       202 => '=E',
       205 => '=I',
+      209 => '=N',
       230 => '=A',
       238 => '=I',
-      241 => '=N',
+      241 => '=n',
     );
 
     // Characters that are okay to see on the site
