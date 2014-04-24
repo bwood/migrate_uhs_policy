@@ -77,7 +77,7 @@ function migrate_uhs_policy_register_migrations() {
     'Medical Records' => 'Medical_Records',
     'Occupational Health' => 'Occupational_Health',
     'Pharmacy' => 'Pharmacy',
-    'Physical Therapby' => 'Physical_Therapy',
+    'Physical Therapy' => 'Physical_Therapy',
     'Primary & Urgent Care' => 'Primary_and_Urgent_Care',
     'Quality Improvement' => 'Quality_Improvement',
     'Radiology' => 'Radiology',
