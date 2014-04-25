@@ -8,7 +8,8 @@ require_once 'sites/all/libraries/querypath/src/qp.php';
 class SourceParser {
   //protected $id;
   protected $html;
-  protected $qp;
+  //protected $qp;
+  public $qp;
 
   /**
    * Constructor.
@@ -43,6 +44,7 @@ EOT;
     $this->initQP();
     $this->removeFooter();
     $this->removeTitles();
+    $this->removeBlankLines();
   }
 
   /**
@@ -105,7 +107,7 @@ EOT;
 
   public function removeFooter() {
     // remove <DIV TYPE=FOOTER>
-    $this->qp->remove('div[type=FOOTER]'); //attribute value is case sensitive
+    $this->qp->remove('div[title=footer]'); //attribute value is case sensitive
   }
 
   public function removeTitles() {
@@ -113,6 +115,11 @@ EOT;
     <P CLASS="western" STYLE="margin-bottom: 0in; border-top: none; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding-top: 0in; padding-bottom: 0.01in; padding-left: 0in; padding-right: 0in">
     */
     $this->qp->remove('p[style~=border-bottom]');
+  }
+
+  public function removeBlankLines() {
+    $this->qp->find('p');
+    //print_r($this->qp->matches->storage);
   }
 
   /**

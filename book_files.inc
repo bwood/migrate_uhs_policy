@@ -66,6 +66,7 @@ class UhsMigration extends Migration {
      * : SQLSTATE[HY000]: General error:[error]
      * 1366 Incorrect integer value: '' for column 'sourceid1' at row 1
      */
+
     $csv_contents = file($path);
     $csv_contents_clean = array();
     foreach ($csv_contents as $line) {
@@ -262,13 +263,21 @@ line 95
     $row->title = $this->translateAscii($row->title, $row);
     $row->source_manual = $this->translateAscii($row->source_manual, $row);
 
+    /*
+     * If title or filename contain "," they should be quoted so that MigrateCSV will correctly parse the csv fields.
+     * It's now safe to remove the quotes, and we want to do that so they don't appear in the title field on the website
+     * nor in the filename that we are processing.
+     */
+    $row->title = str_replace('"', '', $row->title);
+    $row->filename = str_replace('"', '', $row->filename);
+
     $file_ext = strtolower(array_pop(explode('.', $row->filename)));
     $ext_supported = array('doc', 'docx');
 
     // Is this a shared page?
     if (!empty($row->source_manual)) {
       $source_machine_name = $this->translations[$row->source_manual];
-      $file_source_id = $this->getSharedFileSourceIdorError($row);
+      $file_source_id = $this->getSharedPageIdorError($row);
       // shared_page created here. doesn't come from csv file.
       $row->shared_page = NULL;
       if (is_int($file_source_id)) {
@@ -299,20 +308,20 @@ line 95
   }
 
 
-  protected function getSharedFileSourceIdorError($row) {
-    //if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
+  protected function getSharedPageIdorError($row) {
     if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
       $this->uhsSetMessage("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . "which could not be found.", "error");
       return FALSE;
     }
-    $source_csv_file = file($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv");
+    $shared_page_manual_handle = fopen($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv", "r");
     $matches = array();
-    foreach ($source_csv_file as $line) {
-      $line = explode(',', $line);
-      if ($line[2] == $row->filename) {
-        $matches[$line[0]] = $line[2];
+
+    while (($data = fgetcsv($shared_page_manual_handle, NULL, ",", '"', '\\')) !== FALSE) {
+      if (str_replace('"', '', $data[2]) == $row->filename) {
+        $matches[$data[0]] = $row->filename;
       }
     }
+
     if (count($matches) == 0) {
       $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", but " . $row->source_manual . ".csv does not contain that file.";
     }
