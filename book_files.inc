@@ -207,6 +207,7 @@ line 95
       234 => '=234',
       238 => '=I',
       241 => '=n',
+      244 => '=244',
     );
 
     // Characters that are okay to see on the site
