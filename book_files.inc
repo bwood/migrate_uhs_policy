@@ -198,16 +198,20 @@ line 95
     // Charters that you don't want to see on the site
     $ugly_char_map = array(
       131 => '=F',
+      144 => '=144',
       202 => '=E',
       205 => '=I',
       209 => '=N',
+      227 => '=227',
       230 => '=A',
+      234 => '=234',
       238 => '=I',
       241 => '=n',
     );
 
     // Characters that are okay to see on the site
     $char_map = array(
+      148 => '"',
       208 => '--',
       210 => '"',
       211 => '"',
@@ -326,7 +330,9 @@ line 95
       $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", but " . $row->source_manual . ".csv does not contain that file.";
     }
     elseif (count($matches) > 1) {
-      $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", and " . $row->source_manual . ".csv lists this file multiple times.";
+      if (trim(strtolower(array_pop($matches))) !== 'pdf') {
+        $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", and " . $row->source_manual . ".csv lists this file multiple times.";
+      }
     }
     elseif (count($matches) == 1) {
       $keys = array_keys($matches);
