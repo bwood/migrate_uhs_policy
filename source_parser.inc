@@ -43,8 +43,9 @@ EOT;
 */
     $this->initQP();
     $this->removeFooter();
-    $this->removeTitles();
+    //$this->removeTitles();
     $this->removeBlankLines();
+    $this->removePinLi();
   }
 
   /**
@@ -107,6 +108,7 @@ EOT;
 
   public function removeFooter() {
     // remove <DIV TYPE=FOOTER>
+    $this->qp->find('div[title=footer]')->after('<p></p>');
     $this->qp->remove('div[title=footer]'); //attribute value is case sensitive
   }
 
@@ -117,9 +119,28 @@ EOT;
     $this->qp->remove('p[style~=border-bottom]');
   }
 
+  /*
+   * <p><br /></p>
+   * unnecessary whitespace. remove <p> and child.
+   */
   public function removeBlankLines() {
-    $this->qp->find('p');
-    //print_r($this->qp->matches->storage);
+    $this->qp->find('br:only-child')->parent()->remove();
+  }
+
+  /*
+   * <li><p>foo</p></li>
+   * unnecessary whitespace. remove the <p> tags.
+   */
+  public function removePinLi() {
+    //foreach ($this->qp->find('p:only-child')->parent('li') as $list_item) {
+    foreach ($this->qp->find('li') as $list_item) {
+      $content = $list_item->children('p')->children()->html();
+      if (!empty($content)) {
+        $x = $list_item->html();
+        $list_item->children('p')->remove();
+        $list_item->html($content);
+      }
+    }
   }
 
   /**
