@@ -170,6 +170,12 @@ class SourceParser {
       return;
     }
 
+    /*
+     * Given:
+     *   <li><p>foobar</p></li>
+     * Make it
+     *   <li><p></p>foobar</li>
+     */
     foreach ($this->qp->find('p:only-child')->parent('li') as $list_item) {
       $x = $list_item->html();
       $content = $list_item->children('p')->children()->html();
@@ -179,6 +185,12 @@ class SourceParser {
       $y = $list_item->html();
     }
 
+    /*
+     * Given:
+     *   <li><p></p>foobar</li>
+     * Make it
+     *   <li>foobar</li>
+     */
     foreach ($this->qp->find('p')->parent('li') as $list_item) {
       $content2 = $list_item->children('p')->children()->html();
       if (empty($content2)) {
