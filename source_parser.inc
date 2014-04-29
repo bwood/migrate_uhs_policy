@@ -24,29 +24,13 @@ class SourceParser {
   public function __construct($html) {
     $this->id = $id;
     $this->html = $html;
-    /*
-        $this->html = <<<EOT
-    <P CLASS="western" STYLE="margin-bottom: 0in"><BR>
-    Stuff
-    </P>
-    <DIV TYPE=FOOTER>
-      <P STYLE="margin-bottom: 0in; widows: 0; orphans: 0"><SDFIELD TYPE=FILENAME FORMAT=PATHNAME>/Users/bwood/Work/drupal/Site-backups/UHS/UHS_Manuals/Allergy/Organization.doc</SDFIELD></P>
-    </DIV>
-    EOT;
-    ;
-    */
-    /*
-        $this->charTransform();
-        $this->fixEncoding();
-        $this->wrapHTML();
-        $this->initQP();
-        $this->stripComments();
-    */
     $this->initQP();
+
     $this->removeFooter();
     $this->removeTitles();
     $this->removeBlankLines();
     $this->removePinLi();
+
   }
 
   /**
@@ -176,21 +160,47 @@ class SourceParser {
    * unnecessary whitespace. remove the <p> tags.
    */
   public function removePinLi() {
-    //foreach ($this->qp->find('p:only-child')->parent('li') as $list_item) {
-    foreach ($this->qp->find('li') as $list_item) {
+    /*
+     * if the document doesn't have li tags get the heck out because things spin
+     * out of control.
+     */
+    $lis = $this->qp->find('li');
+    $size = $lis->size();
+    if ($size < 1) {
+      return;
+    }
+
+    foreach ($this->qp->find('p:only-child')->parent('li') as $list_item) {
+      $x = $list_item->html();
       $content = $list_item->children('p')->children()->html();
-      if (!empty($content)) {
-        $x = $list_item->html();
+      //remove the content of p so that we can delete empty p's in next loop
+      $list_item->children('p')->children()->remove();
+      $list_item->append($content);
+      $y = $list_item->html();
+    }
+
+    foreach ($this->qp->find('p')->parent('li') as $list_item) {
+      $content2 = $list_item->children('p')->children()->html();
+      if (empty($content2)) {
         $list_item->children('p')->remove();
-        $list_item->html($content);
       }
     }
+
   }
 
   /**
    * Return the HTML.
    */
   public function getBody() {
+    /*
+     * When the title is empty we end up with a <title/> tag in the <head> and
+     * somehow this results in migrate putting the entire document inside a
+     * <title> tags which results in a broken blank page.
+     */
+    $title = $this->qp->find('title')->text();
+    if (empty($title)) {
+      $this->qp->find('title')->remove();
+    }
     $body = $this->qp->top('html')->innerHTML();
     $body = trim($body);
     return $body;
