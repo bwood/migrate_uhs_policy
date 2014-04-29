@@ -3,6 +3,7 @@
 // Include QueryPath.
 $path = drupal_get_path('library', 'querypath'); //requires hook_libraries_info?
 require_once 'sites/all/libraries/querypath/src/qp.php';
+
 //require_once drupal_get_path('module', 'my_migration') . '/libraries/QueryPath-2.1.2-minimal/Extension/QPXML.php';
 
 class SourceParser {
@@ -23,24 +24,24 @@ class SourceParser {
   public function __construct($html) {
     $this->id = $id;
     $this->html = $html;
-/*
-    $this->html = <<<EOT
-<P CLASS="western" STYLE="margin-bottom: 0in"><BR>
-Stuff
-</P>
-<DIV TYPE=FOOTER>
-	<P STYLE="margin-bottom: 0in; widows: 0; orphans: 0"><SDFIELD TYPE=FILENAME FORMAT=PATHNAME>/Users/bwood/Work/drupal/Site-backups/UHS/UHS_Manuals/Allergy/Organization.doc</SDFIELD></P>
-</DIV>
-EOT;
-;
-*/
-/*
-    $this->charTransform();
-    $this->fixEncoding();
-    $this->wrapHTML();
-    $this->initQP();
-    $this->stripComments();
-*/
+    /*
+        $this->html = <<<EOT
+    <P CLASS="western" STYLE="margin-bottom: 0in"><BR>
+    Stuff
+    </P>
+    <DIV TYPE=FOOTER>
+      <P STYLE="margin-bottom: 0in; widows: 0; orphans: 0"><SDFIELD TYPE=FILENAME FORMAT=PATHNAME>/Users/bwood/Work/drupal/Site-backups/UHS/UHS_Manuals/Allergy/Organization.doc</SDFIELD></P>
+    </DIV>
+    EOT;
+    ;
+    */
+    /*
+        $this->charTransform();
+        $this->fixEncoding();
+        $this->wrapHTML();
+        $this->initQP();
+        $this->stripComments();
+    */
     $this->initQP();
     $this->removeFooter();
     $this->removeTitles();
@@ -113,20 +114,49 @@ EOT;
   }
 
   public function removeTitles() {
+    /*
+     * Remove
+     *   <p style=...border-bottom: 1.50pt solid #c0c0c0c0;...>
+     *   ...
+     *   </p>
+     */
     foreach ($this->qp->find('p') as $p) {
       $style = $p->attr("style");
       if (strpos($style, "border-bottom: 1.50pt solid #c0c0c0;") !== FALSE) {
         $p->remove();
       }
+      /*
+       * Remove
+       *   <p style=...border-bottom: 1px solid #000000;...>
+       *     <font ... >Foo bar Page x of x</font>
+       *   </p>
+       */
+
+      //if (preg_match('/border-bottom: .+ solid #000000;/', $style) == 1) {
       if (strpos($style, 'border-bottom: 1px solid #000000;') !== FALSE) {
         $match = FALSE;
         $font_tags = $p->html();
-        foreach ($p->children('font') as $f) {
-          if (strpos($f->text(), 'Page ') !== FALSE) {
+        foreach ($p->deepest('font') as $c) {
+          if (strpos($c->text(), 'Page ') !== FALSE) {
             $match = TRUE;
           }
         }
-        if ($match) {
+        /*
+         * Remove
+         *   <p style=...border-bottom: 1px solid #000000;...>
+         *     <br>
+         *     <br>
+         *   </p>
+         */
+        $count = 0;
+        foreach ($p->children() as $c) {
+          $c1 = $c->html();
+          // the html source is just <br>, but qp gives us <br/>
+          if (trim($c1) == '<br/>') {
+            $count++;
+          }
+        }
+        if (($match) || ($count == 2)) {
           $p->remove();
         }
       }
