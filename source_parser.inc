@@ -43,7 +43,7 @@ EOT;
 */
     $this->initQP();
     $this->removeFooter();
-    //$this->removeTitles();
+    $this->removeTitles();
     $this->removeBlankLines();
     $this->removePinLi();
   }
@@ -113,10 +113,24 @@ EOT;
   }
 
   public function removeTitles() {
-    /* remove
-    <P CLASS="western" STYLE="margin-bottom: 0in; border-top: none; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding-top: 0in; padding-bottom: 0.01in; padding-left: 0in; padding-right: 0in">
-    */
-    $this->qp->remove('p[style~=border-bottom]');
+    foreach ($this->qp->find('p') as $p) {
+      $style = $p->attr("style");
+      if (strpos($style, "border-bottom: 1.50pt solid #c0c0c0;") !== FALSE) {
+        $p->remove();
+      }
+      if (strpos($style, 'border-bottom: 1px solid #000000;') !== FALSE) {
+        $match = FALSE;
+        $font_tags = $p->html();
+        foreach ($p->children('font') as $f) {
+          if (strpos($f->text(), 'Page ') !== FALSE) {
+            $match = TRUE;
+          }
+        }
+        if ($match) {
+          $p->remove();
+        }
+      }
+    }
   }
 
   /*
