@@ -25,10 +25,9 @@ class SourceParser {
     $this->id = $id;
     $this->html = $html;
     $this->initQP();
-
     $this->removeFooter();
     $this->removeTitles();
-    $this->removeBlankLines();
+    $this->removeBrInP();
     $this->removePinLi();
 
   }
@@ -152,8 +151,12 @@ class SourceParser {
    * <p><br /></p>
    * unnecessary whitespace. remove <p> and child.
    */
-  public function removeBlankLines() {
-    $this->qp->find('br:only-child')->parent()->remove();
+  public function removeBrInP() {
+    $content = trim($this->qp->find('br:only-child')->parent('p')->text());
+    // Ensure no text in the <p>
+    if (empty($content)) {
+      $this->qp->find('br:only-child')->parent('p')->remove();
+    }
   }
 
   /*
