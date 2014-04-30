@@ -96,8 +96,28 @@ class SourceParser {
     $this->qp->find('div[title=footer]')->after('<p></p>');
     $this->qp->remove('div[title=footer]'); //attribute value is case sensitive
   }
-
   public function removeTitles() {
+    $this->removeAllergyTitles();
+    $this->removeDivTitle();
+  }
+
+  public function removeDivTitle() {
+    $save = '';
+    $div_title = $this->qp->find('div[title=header]');
+    foreach($div_title->children('p') as $p) {
+      $content = $p->children()->html();
+      if ((preg_match('/reviewed/i', $content) > 0) ||
+        (preg_match('/effective\W*date/im', $content) > 0)) {
+        foreach ($p->children() as $pc) {
+          $save .= $pc->html();
+        }
+      }
+    }
+    $div_title->children('p')->remove();
+    $div_title->html("<p>" . $save ."</p>");
+  }
+
+  public function removeAllergyTitles() {
     /*
      * Remove
      *   <p style=...border-bottom: 1.50pt solid #c0c0c0c0;...>
