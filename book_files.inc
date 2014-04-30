@@ -302,6 +302,7 @@ line 95
     }
     //elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
     elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && (in_array($file_ext, $ext_supported))) {
+      //echo $row->source_id . "\n";
       $sp = new SourceParser($this->getHtml($row));
       $row->body = $sp->getBody();
     }
@@ -331,6 +332,7 @@ line 95
       $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", but " . $row->source_manual . ".csv does not contain that file.";
     }
     elseif (count($matches) > 1) {
+      //TODO: PDFs, skip etc can't be shared pages
       if (trim(strtolower(array_pop($matches))) !== 'pdf') {
         $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", and " . $row->source_manual . ".csv lists this file multiple times.";
       }
