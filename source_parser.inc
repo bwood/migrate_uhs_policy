@@ -78,6 +78,7 @@ class SourceParser {
       'convert_to_encoding' => 'utf-8',
       'convert_from_encoding' => 'utf-8',
       'strip_low_ascii' => FALSE,
+      'replace_entities' => TRUE,
     );
     $this->qp = htmlqp($this->html, NULL, $qp_options);
   }
@@ -177,12 +178,13 @@ class SourceParser {
      *   <li><p></p>foobar</li>
      */
     foreach ($this->qp->find('p:only-child')->parent('li') as $list_item) {
-      $x = $list_item->html();
-      $content = $list_item->children('p')->children()->html();
+      //$x = $list_item->html();
+      $content = htmlentities($list_item->children('p')->deepest()->text());
+      $content = trim(str_replace('&le;', '&lt;=', $content)); //this character causes error
       //remove the content of p so that we can delete empty p's in next loop
-      $list_item->children('p')->children()->remove();
+      $list_item->children('p')->deepest()->remove();
       $list_item->append($content);
-      $y = $list_item->html();
+      //$y = $list_item->html();
     }
 
     /*
@@ -192,8 +194,8 @@ class SourceParser {
      *   <li>foobar</li>
      */
     foreach ($this->qp->find('p')->parent('li') as $list_item) {
-      $content2 = $list_item->children('p')->children()->html();
-      if (empty($content2)) {
+      $content2 = $list_item->children('p')->deepest()->html();
+      if ($content2 == '<p/>') {
         $list_item->children('p')->remove();
       }
     }
