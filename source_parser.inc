@@ -25,6 +25,7 @@ class SourceParser {
     $this->id = $id;
     $this->html = $html;
     $this->initQP();
+
     $this->removeFooter();
     $this->removeTitles();
     $this->removeBrInP();
@@ -93,8 +94,11 @@ class SourceParser {
 
   public function removeFooter() {
     // remove <DIV TYPE=FOOTER>
-    $this->qp->find('div[title=footer]')->after('<p></p>');
-    $this->qp->remove('div[title=footer]'); //attribute value is case sensitive
+    if (is_object($this->qp->find('div[title=footer]'))) {
+      $this->qp->find('div[title=footer]')->after('<p></p>');
+      $this->qp->remove('div[title=footer]'); //attribute value is case sensitive
+    }
+
   }
   public function removeTitles() {
     $this->removeAllergyTitles();
@@ -102,9 +106,15 @@ class SourceParser {
   }
 
   public function removeDivTitle() {
-    $save = '';
+    // Bail if the interesting html nodes aren't present
     $div_title = $this->qp->find('div[title=header]');
-    foreach($div_title->children('p') as $p) {
+    $size = $div_title->children()->size();
+    if ($size < 1) {
+      return;
+    }
+
+    $save = '';
+    foreach($div_title->children() as $p) {
       $content = $p->children()->html();
       if ((preg_match('/reviewed/i', $content) > 0) ||
         (preg_match('/effective\W*date/im', $content) > 0)) {
@@ -118,6 +128,11 @@ class SourceParser {
   }
 
   public function removeAllergyTitles() {
+    // Bail if interesting node not present
+    if (!is_object($this->qp->find('p'))) {
+      return;
+    }
+
     /*
      * Remove
      *   <p style=...border-bottom: 1.50pt solid #c0c0c0c0;...>
@@ -129,6 +144,7 @@ class SourceParser {
       if (strpos($style, "border-bottom: 1.50pt solid #c0c0c0;") !== FALSE) {
         $p->remove();
       }
+
       /*
        * Remove
        *   <p style=...border-bottom: 1px solid #000000;...>
@@ -145,6 +161,7 @@ class SourceParser {
             $match = TRUE;
           }
         }
+
         /*
          * Remove
          *   <p style=...border-bottom: 1px solid #000000;...>
@@ -172,7 +189,15 @@ class SourceParser {
    * unnecessary whitespace. remove <p> and child.
    */
   public function removeBrInP() {
-    $content = trim($this->qp->find('br:only-child')->parent('p')->text());
+
+    // Bail if the interesting node is not present
+    $node = $this->qp->find('p')->children('br');
+    $size = $node->size();
+    if ($size < 1) {
+      return;
+    }
+
+    $content = trim($this->qp->find('br:only-child')->parent('p')->html());
     // Ensure no text in the <p>
     if (empty($content)) {
       $this->qp->find('br:only-child')->parent('p')->remove();
@@ -184,10 +209,7 @@ class SourceParser {
    * unnecessary whitespace. remove the <p> tags.
    */
   public function removePinLi() {
-    /*
-     * if the document doesn't have li tags get the heck out because things spin
-     * out of control.
-     */
+    // Bail if the interesting node is not present
     $lis = $this->qp->find('li');
     $size = $lis->size();
     if ($size < 1) {
