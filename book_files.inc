@@ -70,11 +70,11 @@ class UhsMigration extends Migration {
     $csv_contents = file($path);
     $csv_contents_clean = array();
     foreach ($csv_contents as $line) {
-      if (preg_match("/^,+/", $line) === 0){
+      if (preg_match("/^,+/", $line) === 0) {
         $csv_contents_clean[] = $line;
       }
       else {
-        $x=1;
+        $x = 1;
       }
     }
 
@@ -145,13 +145,13 @@ class UhsMigration extends Migration {
     $this->addFieldMapping('title', 'title');
   }
 
-  public function uhsSetMessage($msg, $type) {
+  public function uhsSetMessage($msg, $type='') {
     if (!isset($type)) {
       if (strpos($msg, 'Error: ') === FALSE) {
-        $msg = "$type: $msg";
+        $msg = "Error: $msg";
       }
     }
-    print "\n$msg\n";
+    print "\n$type: $msg\n";
   }
 
   public function preImport() {
@@ -248,6 +248,14 @@ line 95
    */
   public function prepareRow($row) {
     if ((empty($row->title)) || (empty($row->filename))) {
+      return FALSE;
+    }
+
+    if ((strpos(strtolower($row->filename), 'pdf') === FALSE) &&
+      (strpos(strtolower($row->filename), 'skip') === FALSE) &&
+      (count(explode('.', $row->filename)) > 2)
+    ) {
+      $this->uhsSetMessage("source_id=" . $row->source_id . ": Filename cannont contain > 1 period. Period only allowed before file extension: " . $row->filename, "Error");
       return FALSE;
     }
 
