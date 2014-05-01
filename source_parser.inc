@@ -100,6 +100,7 @@ class SourceParser {
     }
 
   }
+
   public function removeTitles() {
     $this->removeAllergyTitles();
     $this->removeDivTitle();
@@ -114,17 +115,18 @@ class SourceParser {
     }
 
     $save = '';
-    foreach($div_title->children() as $p) {
+    foreach ($div_title->children() as $p) {
       $content = $p->children()->html();
       if ((preg_match('/reviewed/i', $content) > 0) ||
-        (preg_match('/effective\W*date/im', $content) > 0)) {
+        (preg_match('/effective\W*date/im', $content) > 0)
+      ) {
         foreach ($p->children() as $pc) {
           $save .= $pc->html();
         }
       }
     }
     $div_title->children('p')->remove();
-    $div_title->html("<p>" . $save ."</p>");
+    $div_title->html("<p>" . $save . "</p>");
   }
 
   public function removeAllergyTitles() {
@@ -153,7 +155,9 @@ class SourceParser {
        */
 
       //if (preg_match('/border-bottom: .+ solid #000000;/', $style) == 1) {
-      if (strpos($style, 'border-bottom: 1px solid #000000;') !== FALSE) {
+      if (((strpos($style, 'border-bottom: 1px solid #000000;') !== FALSE)) ||
+        (strpos($style, 'border-bottom: 0.75pt solid #000000;') !== FALSE)
+      ) {
         $match = FALSE;
         $font_tags = $p->html();
         foreach ($p->deepest('font') as $c) {
@@ -260,7 +264,11 @@ class SourceParser {
     if (empty($title)) {
       $this->qp->find('title')->remove();
     }
-    $body = $this->qp->top('html')->innerHTML();
+    //$body = $this->qp->top('html')->innerHTML();
+    $body = $this->qp->top('body')->innerHTML();
+    //Replace newlines with space.  panopoly_wysiwyg_text converts these to <p> an <br>
+    $body = str_replace("\n", ' ', $body);
+    $body = str_replace("\t", ' ', $body);
     $body = trim($body);
     return $body;
   }
