@@ -145,7 +145,7 @@ class UhsMigration extends Migration {
     $this->addFieldMapping('title', 'title');
   }
 
-  public function uhsSetMessage($msg, $type='') {
+  public function uhsSetMessage($msg, $type = '') {
     if (!isset($type)) {
       if (strpos($msg, 'Error: ') === FALSE) {
         $msg = "Error: $msg";
@@ -265,6 +265,12 @@ line 95
       $row->$k = trim($v);
     }
 
+    //FIXME: "=skip=" woulda been better.  Possibility of false positives.
+    if (strpos(strtolower($row->filename), 'skip') !== FALSE) {
+      $row->body = "Error: The content for this page is 'skip'.  This type of content will be migrated in a future phase of the project.";
+      return TRUE;
+    }
+
     /*
      * Since each migration processes one CSV file which represents one book,
      * book_id can always be 1.
@@ -332,17 +338,34 @@ line 95
     $matches = array();
 
     while (($data = fgetcsv($shared_page_manual_handle, NULL, ",", '"', '\\')) !== FALSE) {
-      if (str_replace('"', '', $data[2]) == $row->filename) {
-        $matches[$data[0]] = $row->filename;
+      // if filename=pdf try to match on title, else match on filename
+      if (trim(strtolower($row->filename)) == 'pdf') {
+        if (str_replace('"', '', $data[1]) == $row->title) {
+          $matches[$data[0]] = "pdf";
+        }
+      }
+      else {
+        if (str_replace('"', '', $data[2]) == $row->filename) {
+          $matches[$data[0]] = $row->filename;
+        }
       }
     }
 
     if (count($matches) == 0) {
-      $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", but " . $row->source_manual . ".csv does not contain that file.";
+      if (trim(strtolower($row->filename)) == 'pdf') {
+        $error = "Error PDF Match: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and PDF with title = " . $row->title . ", but " . $row->source_manual . ".csv does not contain that file.";
+      }
+      else {
+        $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", but " . $row->source_manual . ".csv does not contain that file.";
+      }
+
     }
     elseif (count($matches) > 1) {
       //TODO: PDFs, skip etc can't be shared pages
-      if (trim(strtolower(array_pop($matches))) !== 'pdf') {
+      if (trim(strtolower(array_pop($matches))) == 'pdf') {
+        $error = "Error: PDF Match: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and PDF with title = " . $row->title . ", and " . $row->source_manual . ".csv lists this file multiple times.";
+      }
+      else {
         $error = "Error: source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . ".csv and filename = " . $row->filename . ", and " . $row->source_manual . ".csv lists this file multiple times.";
       }
     }
