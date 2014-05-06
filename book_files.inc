@@ -156,17 +156,23 @@ class UhsMigration extends Migration {
 
   public function preImport() {
     parent::preImport();
+
     // Code to execute before first article row is imported
     /*
      * Prevents:
      *
-Migration failed with source plugin exception: Illegal string offset 'value'                               [error]
-File
-/Users/bwood/Sites/pantheon/uhs-policy2/profiles/openberkeley/modules/contrib/media/modules/media_wysiwyg/includes/media_wysiwyg.file_usage.inc,
-line 95
+     * Migration failed with source plugin exception: Illegal string offset
+     * 'value'                               [error]
+     * File
+     * /Users/bwood/Sites/pantheon/uhs-policy2/profiles/openberkeley/modules/
+     * contrib/media/modules/media_wysiwyg/includes/media_wysiwyg.file_usage.inc,
+     * line 95
      */
     module_disable(array('media_wysiwyg'));
     //drupal_get_messages('error', false); //would be nice to kill that set_message
+
+    //Setup pathauto pattern for UHS Manuals (books)
+    variable_set('pathauto_node_book_pattern', 'manuals/[node:book:parents:join-path]/[node:title]');
   }
 
   public function postImport() {
