@@ -124,7 +124,7 @@ class UhsMigration extends Migration {
     /*
      * shared_page is created in prepareRow()
      */
-    $this->addFieldMapping('field_shared_page', 'shared_page')
+    $this->addFieldMapping('field_shared_book_page', 'shared_page')
       /*
        * this will "lazily" create terms as we encounter them
        * i.e. if you input foo and foo isn't in the vocab, it will create the
