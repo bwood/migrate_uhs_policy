@@ -137,7 +137,7 @@ class UhsMigration extends Migration {
     // body not in source data
     //FIXME: body, null?
     $this->addFieldMapping('body', 'body')
-      ->arguments(array('format' => 'panopoly_wysiwyg_text'))
+      ->arguments(array('format' => 'uhspolicy_wysiwyg_text'))
       //->arguments(array('format' => 'uhs_full_html'))
       ->defaultValue(NULL);
 

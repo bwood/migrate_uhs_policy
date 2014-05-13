@@ -87,14 +87,14 @@ function migrate_uhs_policy_register_migrations() {
     'Specialty' => 'Specialty',
     'Sports Medicine' => 'Sports_Medicine',
     'Urgent Care RN Standing Orders' => 'Urgent_Care_RN_Standing_Orders',
-    'Used in Multiple Manuals' => 'Used_in_Multiple_Manuals',
+    'Shared Book Pages' => 'Shared_Book_Pages',
   );
   $manuals_arguments = array(
     array(
-      'machine_name' => 'Used_in_Multiple_Manuals',
+      'machine_name' => 'Shared_Book_Pages',
       'class_name' => 'UhsMigration',
-      'description' => t('Import Used in Multiple Manuals (shared pages)'),
-      'path' => variable_get('uhs_migration_source', '/tmp') . '/Used in Multiple Manuals.csv',
+      'description' => t('Import Shared Book Pages'),
+      'path' => variable_get('uhs_migration_source', '/tmp') . '/Shared Book Pages.csv',
     ),
     array(
       'machine_name' => 'Allergy_and_Travel',
