@@ -30,6 +30,7 @@ class SourceParser {
     $this->removeTitles();
     $this->removeBrInP();
     $this->removePinLi();
+    $this->removeNegativeMargins();
 
   }
 
@@ -58,6 +59,20 @@ class SourceParser {
   }
 
   /**
+   * Replace high ASCII with which can be searched on and manually corrected
+   * later. Could result in mangled content
+   */
+  protected function stripHighAscii() {
+    foreach (str_split($this->html) as $char) {
+      $ascii = ord($char);
+      if ($ascii > 127) {
+        $this->html_old = $this->html;
+        $this->html = str_replace(chr($ascii), '', $this->html);
+      }
+    }
+  }
+
+  /**
    * Wrap an HTML fragment in the correct head/meta tags so that UTF-8 is
    * correctly detected, and for the parsers and tidiers.
    */
@@ -76,7 +91,8 @@ class SourceParser {
   protected function initQP() {
     $qp_options = array(
       'convert_to_encoding' => 'utf-8',
-      'convert_from_encoding' => 'utf-8',
+      //'convert_from_encoding' => 'utf-8',
+      'convert_from_encoding' => '',
       'strip_low_ascii' => FALSE,
       'replace_entities' => TRUE,
     );
@@ -249,6 +265,33 @@ class SourceParser {
       }
     }
 
+  }
+
+  /**
+   * Remove margin attributes with negative values
+   */
+  public function removeNegativeMargins() {
+    $ps = $this->qp->find('p');
+    $hs = $this->qp->find('h1,h2,h3,h4,h5,h6');
+    /*
+    $psize = $ps->size();
+    $psize = $hs->size();
+    if ($size < 1) {
+      return;
+    }
+    */
+
+    foreach (array($ps, $hs) as $tags) {
+      if ($tags->size() < 1) {
+        continue;
+      }
+      foreach ($tags as $tag) {
+        if ($tag->hasAttr('style')) {
+          $clean_value = preg_replace("/((?:margin-left)|(?:margin-right)):\s*-[^;]*;\s*/", '', $tag->attr('style'));
+          $tag->attr('style', $clean_value);
+        }
+      }
+    }
   }
 
   /**

@@ -32,6 +32,9 @@ class UhsMigration extends Migration {
       'source_manual' => t('Name of the external manual that contains this document.'),
     );
 
+    // report on unknown ascii characters
+    $this->unknown_ascii = array();
+    $this->unknown_ascii_report = FALSE;
 
     /**
      * Simple initialization.
@@ -177,15 +180,30 @@ class UhsMigration extends Migration {
 
   public function postImport() {
     parent::postImport();
+
+    //report on unknown ascii encountered
+    if ($this->unknown_ascii_report) {
+      if (count($this->unknown_ascii) > 0) {
+        sort($this->unknown_ascii);
+        print "Unknown ascii characters found " . implode(', ', $this->unknown_ascii) . "\n";
+      }
+    }
     // Code to execute before first article row is imported
     module_enable(array('media_wysiwyg'));
     //drupal_get_messages('error', false); //would be nice to kill that set_message
   }
 
+  /**
+   * Search/replace certain extended ASCII characters. Provide reporting on characters found.
+   *
+   * @param $string
+   * @param $row
+   * @return bool|mixed
+   */
   public function translateAscii($string, $row) {
 
     /*
-     * Don't work on 'filename' by defualt. Event if filename has ext ascii
+     * Don't work on 'filename' by default. Event if filename has ext ascii
      * it will match a filename value with the same ext ascii in another sheet
      * which we want.
      */
@@ -202,18 +220,26 @@ class UhsMigration extends Migration {
      * this replacement might not be necessary.
      */
 
+    /*
+     * Default replacement for unknown characters
+     * If empty/NULL ascii codes not found in the map arrays will be stripped.
+     * If you want to see what's being stripped set $this->unknown_ascii_report
+     * to TRUE in __construct()
+     */
+    $unknown = '';
+
     // Charters that you don't want to see on the site
     $ugly_char_map = array(
-      131 => '=F',
+      131 => '=131',
       144 => '=144',
-      202 => '=E',
-      205 => '=I',
-      209 => '=N',
+      202 => '=202',
+      205 => '=205',
+      209 => '=209',
       227 => '=227',
-      230 => '=A',
+      230 => '=230',
       234 => '=234',
-      238 => '=I',
-      241 => '=n',
+      238 => '=238',
+      241 => '=241',
       244 => '=244',
     );
 
@@ -224,28 +250,61 @@ class UhsMigration extends Migration {
       210 => '"',
       211 => '"',
       213 => "'",
+      226 => "-",
+      // below: found after html conversion
+      128 => '',
+      147 => '',
+      239 => '',
+      130 => '',
+      159 => '',
+      153 => "'",
     );
 
     $ext_char_map = $char_map + $ugly_char_map;
+
+    $untranslated = array();
+    $translated = array();
 
     foreach (str_split($string) as $char) {
       $ascii = ord($char);
       if ($ascii > 127) {
         $string_old = $string;
+
         if (!in_array($ascii, array_keys($ext_char_map))) {
-          $this->uhsSetMessage("========> Error: source_id=" . $row->source_id . ": Extended ASCII characters found ($ascii)", "error");
-          return FALSE;
+          $untranslated[$ascii] = $row->source_id;
+          $string = str_replace(chr($ascii), $unknown, $string);
         }
         else {
+          $translated[$ascii] = $row->source_id;
           $string = str_replace(chr($ascii), $ext_char_map[$ascii], $string);
         }
+        /*
         // Notify the user about ugly chars in the title.
         if (($string_old == $row->title) && (in_array($ascii, array_keys($ugly_char_map)))) {
-          $this->uhsSetMessage("Error: source_id=" . $row->source_id . ": Page title contains extended ASCII characters. Translated to: $string", "error");
+          $translated[$ascii] = $row->source_id;
+
         }
+        */
       }
     }
 
+    if ($this->unknown_ascii_report) {
+
+      while (list($k, $v) = each($untranslated)) {
+        $this->uhsSetMessage("========> Error: source_id=" . $v . ": Extended ASCII characters found ($k). These will appear as '=U' on the page.", "error");
+      }
+      /*
+      while (list($k, $v) = each($translated)) {
+        $this->uhsSetMessage("Error: source_id=" . $v . ": Extended ASCII characters Translated to: " . $ugly_char_map[$k], "error");
+      }
+      */
+      foreach (array_keys($untranslated) as $code) {
+        if (!in_array($code, $this->unknown_ascii)) {
+          array_push($this->unknown_ascii, $code);
+        }
+      }
+
+    }
     return $string;
   }
 
@@ -464,7 +523,9 @@ class UhsMigration extends Migration {
 
     // if the .html verison exists, re-import it
     if (count($source_files['html']) == 1) {
-      return file_get_contents($source_files['html'][0]);
+      // The converted HTML will contain some unknown characters
+      $html = $this->translateAscii(file_get_contents($source_files['html'][0]), $row);
+      return $html;
     }
   }
 
