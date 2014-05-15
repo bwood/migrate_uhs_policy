@@ -250,7 +250,7 @@ class UhsMigration extends Migration {
       210 => '"',
       211 => '"',
       213 => "'",
-      226 => "-",
+      226 => "&mdash;",
       // below: found after html conversion
       128 => '',
       147 => '',
@@ -382,7 +382,8 @@ class UhsMigration extends Migration {
     }
     //elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && $row->parent_id !== 1) {
     elseif ((!in_array(strtoupper($row->filename), array('BOOK', 'PDF'))) && (in_array($file_ext, $ext_supported))) {
-      //echo $row->source_id . "\n";
+      //DEBUG: find ids that make qp bork.
+      //print $row->source_id . "\n";
       $sp = new SourceParser($this->getHtml($row));
       $row->body = $sp->getBody();
     }
@@ -396,7 +397,7 @@ class UhsMigration extends Migration {
 
   protected function getSharedPageIdorError($row) {
     if (!file_exists($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv")) {
-      $this->uhsSetMessage("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . "which could not be found.", "error");
+      $this->uhsSetMessage("source_id=" . $row->source_id . " references source_manual = " . $row->source_manual . " which could not be found.", "error");
       return FALSE;
     }
     $shared_page_manual_handle = fopen($this->uhs_migration_source_dir . "/" . $row->source_manual . ".csv", "r");
@@ -524,7 +525,8 @@ class UhsMigration extends Migration {
     // if the .html verison exists, re-import it
     if (count($source_files['html']) == 1) {
       // The converted HTML will contain some unknown characters
-      $html = $this->translateAscii(file_get_contents($source_files['html'][0]), $row);
+      //$html = $this->translateAscii(file_get_contents($source_files['html'][0]), $row);
+      $html = file_get_contents($source_files['html'][0]);
       return $html;
     }
   }
