@@ -240,31 +240,35 @@ class SourceParser {
      * Given:
      *   <li><p>foobar</p></li>
      * Make it
-     *   <li><p></p>foobar</li>
-     */
-    foreach ($this->qp->find('p:only-child')->parent('li') as $list_item) {
-      //$x = $list_item->html();
-      $content = htmlentities($list_item->children('p')->deepest()->text());
-      $content = trim(str_replace('&le;', '&lt;=', $content)); //this character causes error
-      //remove the content of p so that we can delete empty p's in next loop
-      $list_item->children('p')->deepest()->remove();
-      $list_item->append($content);
-      //$y = $list_item->html();
-    }
-
-    /*
-     * Given:
-     *   <li><p></p>foobar</li>
-     * Make it
      *   <li>foobar</li>
      */
-    foreach ($this->qp->find('p')->parent('li') as $list_item) {
-      $content2 = $list_item->children('p')->deepest()->html();
-      if ($content2 == '<p/>') {
-        $list_item->children('p')->remove();
+    foreach ($this->qp->find('p:only-child') as $list_item) {
+      //$x = $list_item->html();
+      $parent = $list_item->parent();
+      //$y = $parent->html();
+      if (!$parent->is('li')) {
+        continue;
       }
-    }
 
+      //if matched tag has children get them, otherwise get text
+      $num_children = $list_item->children()->size();
+      if ($num_children > 0) {
+        $content = $list_item->children()->html();
+      }
+      else {
+        $content = $list_item->text();
+      }
+      /*
+       * These next two lines might seem unnecessary, but I've found that by
+       * encoding and then decoding I filter out weird characters that cause
+       * errors.
+       */
+      $content = htmlentities($list_item->html());
+      $content = trim(html_entity_decode($content));
+      $list_item->remove();
+      $parent->append($content);
+
+    }
   }
 
   /**
