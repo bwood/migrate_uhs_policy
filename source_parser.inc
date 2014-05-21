@@ -25,11 +25,11 @@ class SourceParser {
     $this->id = $id;
     $this->html = $html;
     $this->initQP();
-
     $this->removeFooter();
     $this->removeTitles();
     $this->removeBrInP();
     $this->removePinLi();
+    $this->removeImages();
     $this->removeNegativeMargins();
 
   }
@@ -308,6 +308,13 @@ class SourceParser {
         }
       }
     }
+  }
+
+  /**
+   * Kill all images
+   */
+  public function removeImages() {
+    $this->qp->find('img')->remove();
   }
 
   /**
