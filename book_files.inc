@@ -117,16 +117,12 @@ class UhsMigration extends Migration {
     // Not mapped to destination fields. (Will still be avialable in $row.)
     $this->addUnmigratedSources(array('filename', 'parent_id', 'source_manual'));
 
-    // Destinations that that don't map to sources
-    // $this->addUnmigratedDestinations(array('field_shared_page'));
-
     //uid not in source data
     $this->addFieldMapping('uid', NULL)
       ->defaultValue(1);
 
-    /*
-     * shared_page is created in prepareRow()
-     */
+
+    // shared_page is created in prepareRow()
     $this->addFieldMapping('field_shared_book_page', 'shared_page')
       /*
        * this will "lazily" create terms as we encounter them
@@ -134,6 +130,11 @@ class UhsMigration extends Migration {
        * term/tid and populate this termref field with the tid (the value
        * of the term itself lives in the vocab table.
        */
+      ->arguments(array('create_term' => TRUE))
+      ->defaultValue(NULL);
+
+    // migration_cleanup is created in prepareRow()
+    $this->addFieldMapping('field_migration_cleanup', 'migration_cleanup')
       ->arguments(array('create_term' => TRUE))
       ->defaultValue(NULL);
 
@@ -176,6 +177,7 @@ class UhsMigration extends Migration {
 
     //Setup pathauto pattern for UHS Manuals (books)
     variable_set('pathauto_node_book_pattern', 'manuals/[node:book:parents:join-path]/[node:title]');
+
   }
 
   public function postImport() {
@@ -386,6 +388,11 @@ class UhsMigration extends Migration {
       //print $row->source_id . "\n";
       $sp = new SourceParser($this->getHtml($row));
       $row->body = $sp->getBody();
+
+      // Add terms to pages containing arbitrary markup which will need manual attention
+      if ($sp->tagIfNodeExists('table')) {
+        $row->migration_cleanup = 'table';
+      }
     }
     else {
       // in this case filename indicates that the row is some type of non-importable content.

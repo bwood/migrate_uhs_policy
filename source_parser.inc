@@ -304,7 +304,7 @@ class SourceParser {
           );
           $clean_value = preg_replace($patterns, '', $tag->attr('style'), -1, $count);
           $tag->attr('style', $clean_value);
-          $y = $tag->html();//debug
+          $y = $tag->html(); //debug
         }
       }
     }
@@ -337,5 +337,20 @@ class SourceParser {
     $body = str_replace("\t", ' ', $body);
     $body = trim($body);
     return $body;
+  }
+
+
+  /**
+   * Indicate if one or more of the selectors is found
+   *
+   * @param $selector
+   * @return bool
+   */
+  public function tagIfNodeExists($selector) {
+    $found = FALSE;
+    if ($this->qp->find($selector)->size() > 0) {
+      $found = TRUE;
+    }
+    return $found;
   }
 }
