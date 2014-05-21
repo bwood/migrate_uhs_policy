@@ -290,9 +290,21 @@ class SourceParser {
         continue;
       }
       foreach ($tags as $tag) {
+        $x = $tag->html(); //debug
         if ($tag->hasAttr('style')) {
-          $clean_value = preg_replace("/((?:margin-left)|(?:margin-right)):\s*-[^;]*;\s*/", '', $tag->attr('style'));
+          $style = $tag->attr('style'); //debug
+          // Attempts to remove all the negative margins failed. Some instances are removed, some are not.
+          // Resorted to creating a custom text format uhsfilter to kill these.
+          //$clean_value = preg_replace('/((?:margin-left)|(?:margin-right)):\s*\-[^;"]*[;"]\s*/', '', $tag->attr('style')); //caught most but not all
+          $patterns = array(
+            '/margin-left:\s*\-[^;"]*[;"]\s*/',
+            '/margin-left: -0.06in;/', //Should match but doesn't: Shared_Book_Pages --idlist=61. manuals/shared-book-pages/explanation-appointment-types.
+            //"/$style/", //debug
+            '/margin-right:\s*\-[^;"]*[;"]\s*/',
+          );
+          $clean_value = preg_replace($patterns, '', $tag->attr('style'), -1, $count);
           $tag->attr('style', $clean_value);
+          $y = $tag->html();//debug
         }
       }
     }
